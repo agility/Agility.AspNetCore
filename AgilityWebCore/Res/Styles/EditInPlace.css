@@ -1,0 +1,30 @@
+﻿
+
+
+div.AgilityContentSectionDefinition 
+{
+	font-family: Verdana;	
+	min-height: 200px;
+	min-width: 150px;
+	border: solid 1px gray;
+	background-color: #748090;
+	/*
+	filter:progid:DXImageTransform.Microsoft.gradient(enabled='true', startColorstr=#c0cddc, endColorstr=#748090);
+	*/
+	background-image:url(../ecms.ashx/Agility.Web.Res.Images.bg_cs_grad.gif);
+	background-repeat:repeat-x;
+	
+	
+}
+
+
+.AgilityContentSectionDefinition  .ContentSectionTitle 
+{		
+	min-width: 150px;
+	color: white;
+	font-size: 9pt;
+	font-weight: bold;	
+	padding: 4px;
+	position: absolute;	
+	border-width: 0px;
+}

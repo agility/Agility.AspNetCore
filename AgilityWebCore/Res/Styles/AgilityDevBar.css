@@ -1,0 +1,453 @@
+﻿form 
+{
+	margin: 0px;
+}
+
+
+.AgilityDevBar 
+{
+	font-family: Arial;	
+	background-color: #4b4c4e;
+	height: 43px;
+	overflow: hidden;
+	
+}
+
+
+.AgilityDevBar .AgilityDevMode
+{
+	min-width: 320px;	
+}
+
+.AgilityDevBarIcon,
+.AgilityDevBarIconError 
+{	
+	height: 26px;
+	width: 27px;
+	float: left;
+	display: block;
+	margin: 8px;
+	margin-right: 0px;
+	border: 0px;
+		
+}
+.AgilityDevBarIconError 
+{
+	height: 30px;
+	width: 30px;
+}
+
+.AgilityDevBarTitle
+{
+	color: White;
+	font-weight: bold;
+	font-size: 16px;
+	float: left;
+	width: 180px;	
+	line-height: 43px;
+	margin: 10px;
+	margin-right: 0px;
+	margin-left: 6px;
+	margin-top: 0px;
+	
+}
+
+.AgilityDevBarError
+{
+	color: White;
+	text-decoration: underline;
+	font-weight: bold;
+	font-size: 16px;
+	float: left;
+	display: block;
+	width: 130px;
+	line-height: 43px;
+	margin: 10px;	
+	margin-right: 0px;
+	margin-top: 0px;
+	
+}
+
+.AgilityDevBarError:hover, .AgilityDevBarError:visited, .AgilityDevBarError:active, .AgilityDevBarError:link
+{
+	color: White;
+	text-decoration: underline;
+}
+
+.AgilityDevBar .ChannelDDL
+{
+	float: left;
+	display: block;
+	font-family: Arial;		
+	font-size:14px;	
+	width: 120px;	
+	margin-bottom:10px;		
+	margin-top: 10px;	
+	border:1px solid #dddddd;
+	
+}
+
+.AgilityDevBar .LanguageDDL
+{
+	float: left;
+	display: block;
+	font-family: Arial;	
+		
+	font-size:14px;
+	max-width: 90px;
+	margin-top:10px;	
+	margin-bottom:10px;		
+	margin-left:9px;
+	border:1px solid #dddddd;
+	
+}
+
+
+.AgilityDevBar .AgilityDevModeFixedRight,
+.AgilityDevBar .AgilityDevModeFixedRightLarge 
+{	
+	float: right;
+	height: 43px;	
+	vertical-align: middle;
+	min-width: 240px;	
+}
+
+.AgilityDevBar .AgilityDevModeFixedRightLarge 
+{
+	min-width: 280px;	
+}
+
+.AgilityDevBar .AgilityDevModeRefresh 
+{
+	
+}
+
+.AgilityDevBar .AgilitySmallRefresh, 
+.AgilityDevBar .AgilityLargeRefresh 
+{
+	float: left;
+	display: block;	
+	margin: 8px;
+	margin-left: 8px;
+}
+
+
+.AgilityDevBar .AgilityDevModeRefresh img 
+{
+	border: 0px;
+}
+
+
+
+.AgilityStatusBar
+{
+	font-family: Arial;	
+	min-height: 74px;	
+	height: 74px;
+	margin: 0px;	
+	
+}
+.AgilityStatusBar div
+{
+	font-family: Arial;	
+	border:solid 0px;
+	line-height: normal
+}
+.AgilityStatusBar .Clear
+{
+	font-family: Arial;	
+	clear:both;
+	font-size:0px;
+}
+.AgilityStatusBar .Fix
+{
+	position: fixed;
+	font-family: Arial;	
+	position:absolute;
+	background-color:#4B4C4D;
+	border-top:solid 4px #171717;
+	border-bottom:solid 4px #171717;
+	padding-top:5px;
+	padding-bottom:5px;
+	width:100%;
+    min-width: 1024px;
+	font-family:Arial;
+	font-size:12px;
+	font-weight:bold;
+	color:#abe0f5;
+	margin: 0px;
+	
+}
+.AgilityStatusBar .Locked
+{
+	font-family: Arial;	
+	min-width:1024px;
+    overflow: hidden;
+    background-color: #4B4C4D;
+}
+.AgilityStatusBar .Logo
+{
+	font-family: Arial;	
+	float:left;
+	margin-top:15px;
+	margin-right:17px;
+	margin-left:17px;
+}
+
+.AgilityStatusBar .imgCloseButton
+{
+	cursor: pointer;
+	cursor: hand;
+		
+}
+
+.AgilityStatusBar .RightPanel
+{
+	font-family: Arial;	
+	float:left;
+	
+
+}
+
+.AgilityStatusBar .StatusPanel
+{	
+	font-family: Arial;	
+	float:left;
+	width:500px;
+	background-image:url(../ecms.ashx/Agility.Web.Res.Images.bg_default.gif);
+	background-repeat:repeat-x;
+}
+.AgilityStatusBar .Published
+{
+	font-family: Arial;	
+	background-image:url(../ecms.ashx/Agility.Web.Res.Images.bg_info.gif);
+}
+
+.AgilityStatusBar .PublishWarning
+{
+	font-family: Arial;	
+	background-image:url(../ecms.ashx/Agility.Web.Res.Images.bg_publishwarning.gif);
+}
+
+.AgilityStatusBar .ErrorOccurred
+{
+	font-family: Arial;	
+	background-image:url(../ecms.ashx/Agility.Web.Res.Images.bg_error.gif);
+}
+
+.AgilityStatusBar .ErrorOccurred a,
+.AgilityStatusBar .ErrorOccurred a:visited 
+{
+	color: White !important;
+}
+
+.AgilityStatusBar .Icon
+{	
+	font-family: Arial;	
+	float:left;
+	height: 56px;
+	width: 60px;
+	margin-left:20px;
+	margin-right:0px;
+}
+
+.AgilityStatusBar .StateName 
+{
+	font-family: Arial;	
+	float:left;
+	margin-top:10px;
+	color:White;
+	font-size:18px;
+	font-weight:bold;	
+	width: 300px;
+	white-space: nowrap;
+} 
+.AgilityStatusBar .StateMessage
+{
+	font-family: Arial;	
+	clear:left;
+	float:left;
+	color:white;
+	font-size:12px;
+	font-weight:normal;
+
+} 
+.AgilityStatusBar .PreviewDateDDL
+{
+	font-family: Arial;	
+	width:125px;
+	margin:0px;
+	margin-left:9px;	
+	font-size:11px;	
+	cursor: pointer;
+	cursor: hand;
+	border:1px solid #dddddd;
+	
+}
+
+
+.AgilityStatusBar .LanguageDDL
+{
+	font-family: Arial;	
+	width:125px;
+	margin-top:0px;
+	margin-left:9px;
+	font-size:11px;
+	border:1px solid #dddddd;
+}
+
+.AgilityStatusBar .ddlSeparator 
+{
+	font-size: 17px;
+	height: 17px;
+	overflow:hidden;
+	margin:0px;
+}
+
+
+
+.AgilityStatusBar .Left
+{
+	font-family: Arial;	
+	float:left;
+}
+.AgilityStatusBar .Right
+{
+	font-family: Arial;	
+	float:right;
+}
+.AgilityStatusBar .Clear
+{
+	font-family: Arial;	
+	clear:both;
+}
+.AgilityStatusBar .ModeSel
+{
+	font-family: Arial;	
+	font-size:12px;
+	float:left;
+	margin-top:2px;
+	margin-left:10px;
+}
+
+.AgilityStatusBar .ModeSel .divTopRow
+{
+	text-align:right;
+	#height: 39px;
+	min-height: 37px;	
+	
+
+}
+
+
+.AgilityStatusBar .ModeSel a, .AgilityStatusBar .ModeSel a:visited, .AgilityStatusBar .ModeSel a:hover
+{
+	
+	font-family:Arial;
+	font-size:12px;
+	font-weight:bold;
+	color:#abe0f5;
+	text-decoration:none;
+}
+
+
+
+.AgilityStatusBar .ModeSel span
+{
+	font-family: Arial;	
+	background-color:#3D3D3D;
+	color:#e3ac1b;
+}
+.AgilityStatusBar .ModeSel span.Sep
+{
+	font-family: Arial;	
+	background-color:#4B4C4D;
+	color:#646464;
+}
+.AgilityStatusBar .ModeSel a:hover
+{
+	
+	background-color:#3D3D3D;
+}
+
+.AgilityStatusBar select 
+{
+	font-weight: normal;
+}
+#agilityPreviewDatepicker 
+{
+	cursor: pointer;
+	padding:0px;
+	border: 1px solid #dddddd !important;
+}
+
+
+#pnlAgilityDateTimePicker 
+{
+	display:none;
+	position: absolute;
+	top: 100px;
+	left: 100px;
+	z-index: 99999;	
+	width: 212px;
+	background-color: white;
+	border: 1px solid #dddddd;
+	padding: 4px;
+	
+}
+
+#pnlAgilityTimeDropDown 
+{
+	margin-top: 5px;
+	padding: 5px;
+	width: 200px;
+}
+
+#pnlAgilityDatePicker 
+{
+	
+}
+
+
+#pnlAgilityTimerPicker 
+{		
+	color: Black;	
+	
+	text-align: center;		
+}
+
+#pnlAgilityTimerPicker select 
+{
+	width: 140px;
+}
+
+
+#pnlAgilityTimePickerButtons 
+{
+	text-align: center;		
+	padding-top: 8px;
+}
+
+#pnlAgilityTimePickerButtons button 
+{	
+	padding-left: 4px;
+	padding-right: 4px;
+	
+}
+
+#AgilityErrorNotice 
+{
+	background-color: #d83a33;
+	border-bottom: 2px solid #961e19;
+}
+
+#AgilityErrorNoticeInner 
+{
+	color: Black;
+	font-weight: bold;
+	font-family: Arial;
+	font-size: 13px;
+	padding: 3px;
+	text-align: center;	
+}
+

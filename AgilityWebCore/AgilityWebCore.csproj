@@ -1,0 +1,99 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup Label="Globals">
+    <SccProjectName>SAK</SccProjectName>
+    <SccProvider>SAK</SccProvider>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccLocalPath>SAK</SccLocalPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <RootNamespace>Agility.Web</RootNamespace>
+    <Version>0.0.1.21</Version>
+    <Company>Agility</Company>
+    <Product>Agility.AspNetCore</Product>
+    <Authors>Agility</Authors>
+    <PackageId>Agility.AspNetCore</PackageId>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Copyright>Agility 2019</Copyright>
+    <Description>Agility.Web Assembly for ASP.Net Core</Description>
+    <PackageReleaseNotes>- Added check for null module definition.</PackageReleaseNotes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Configuration\**" />
+    <Compile Remove="Context\**" />
+    <Compile Remove="Data\**" />
+    <Compile Remove="OData\**" />
+    <Compile Remove="RestApi\**" />
+    <EmbeddedResource Remove="Configuration\**" />
+    <EmbeddedResource Remove="Context\**" />
+    <EmbeddedResource Remove="Data\**" />
+    <EmbeddedResource Remove="OData\**" />
+    <EmbeddedResource Remove="RestApi\**" />
+    <None Remove="Configuration\**" />
+    <None Remove="Context\**" />
+    <None Remove="Data\**" />
+    <None Remove="OData\**" />
+    <None Remove="RestApi\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Class1.cs" />
+    <Compile Remove="Extensions\DataRowExtensions.cs" />
+    <Compile Remove="Extensions\DataRowViewExtensions.cs" />
+    <Compile Remove="HttpHandlers\GoogleSitemapHTTPHandler.cs" />
+    <Compile Remove="HttpHandlers\RobotsFileHandler.cs" />
+    <Compile Remove="HttpModules\AgilityOutputCacheModule.cs" />
+    <Compile Remove="HttpModules\AgilityUrlLanguageModule.cs" />
+    <Compile Remove="HttpModules\ExtensibleAgilityHTTPModule.cs" />
+    <Compile Remove="HttpModules\ReplacementFilterModule.cs" />
+    <Compile Remove="Mvc\AgilityModuleView.cs" />
+    <Compile Remove="Mvc\AgilityPageTemplateView.cs" />
+    <Compile Remove="Mvc\AgilityRouteHandler.cs" />
+    <Compile Remove="Providers\AgilityInlineModuleFormProvider.cs" />
+    <Compile Remove="Providers\AgilitySiteMapProvider.cs" />
+    <Compile Remove="Routing\AgilityRoute.cs" />
+    <Compile Remove="Utils\AgilityDependencyCache.cs" />
+    <Compile Remove="Utils\AgilityGlobalResources.cs" />
+    <Compile Remove="Utils\CircuitBreaker.cs" />
+    <Compile Remove="Utils\FastDirectoryEnumerator.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="Configuration\ComponentSettings.cs" />
+    <Compile Include="Configuration\RequestThrottleMethod.cs" />
+    <Compile Include="Configuration\Settings.cs" />
+    <Compile Include="Configuration\TraceLevel.cs" />
+    <Compile Include="Configuration\TraceSettings.cs" />
+    <Compile Include="Context\AgilityContext.cs" />
+    <Compile Include="Context\AgilitySiteMap.cs" />
+    <Compile Include="Data\AgilityContentItem.cs" />
+    <Compile Include="Data\AgilityContentRepository.cs" />
+    <Compile Include="Data\AgilityContentTag.cs" />
+    <Compile Include="Data\Data.cs" />
+    <Compile Include="Data\DataTableIndex.cs" />
+    <Compile Include="Data\Html.cs" />
+    <Compile Include="Data\ServerAPI.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.6" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Extensions" Version="2.0.2" />
+    <PackageReference Include="System.ServiceModel.Duplex" Version="4.4.1" />
+    <PackageReference Include="System.ServiceModel.Http" Version="4.4.1" />
+    <PackageReference Include="System.ServiceModel.NetTcp" Version="4.4.1" />
+    <PackageReference Include="System.ServiceModel.Security" Version="4.4.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <WCFMetadata Include="Connected Services" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="HttpHandlers\" />
+    <Folder Include="Services\" />
+  </ItemGroup>
+
+</Project>
