@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using Microsoft.Extensions.Configuration;
-using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 
 namespace Agility.Web.Configuration
 {
@@ -80,7 +80,7 @@ namespace Agility.Web.Configuration
 			}
 		}
 
-        public static IHostingEnvironment HostingEnvironment { get; internal set; }
+        public static IHostEnvironment HostingEnvironment { get; internal set; }
     }
 
 	/// <summary>

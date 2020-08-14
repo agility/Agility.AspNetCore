@@ -8,14 +8,16 @@ using Agility.Web.Providers;
 using Agility.Web.Requirements;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
+//using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc.Razor;
+using Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -37,7 +39,7 @@ namespace Agility.Web
         [ThreadStatic]
         private static bool isContextNull;
 
-        public static void Configure(IApplicationBuilder app, IHostingEnvironment env, bool useResponseCaching = true)
+        public static void Configure(IApplicationBuilder app, IHostEnvironment env, bool useResponseCaching = true)
         {
             try
             {
@@ -69,8 +71,8 @@ namespace Agility.Web
             try
             {
                 //required to use inline code
-                services.Configure<RazorViewEngineOptions>(opts => opts.FileProviders.Add(new AgilityDynamicCodeProvider()));
-                services.Configure<RazorViewEngineOptions>(opts => opts.FileProviders.Add(new AgilityDynamicModuleProvider()));
+                services.Configure<MvcRazorRuntimeCompilationOptions>(opts => opts.FileProviders.Add(new AgilityDynamicCodeProvider()));
+                services.Configure<MvcRazorRuntimeCompilationOptions>(opts => opts.FileProviders.Add(new AgilityDynamicModuleProvider()));
 
 
                 var settings = configuration.GetSection("Agility").Get<Settings>();
