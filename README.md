@@ -1,5 +1,5 @@
 # Agility.AspNetCore
-dotnet core SDK for Agility CMS Sync Model.
+dotnet core SDK for Agility CMS Sync Model targeting `NetCore 3.1`.
 
 The package can be installing from NuGet
 ```
