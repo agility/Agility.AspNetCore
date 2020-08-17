@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 
 namespace Agility.Web.Caching
@@ -50,6 +51,10 @@ namespace Agility.Web.Caching
                     var lastSlash = filePath.LastIndexOf('/');
 
                     var fileName = filePath.Substring(lastSlash + 1);
+                    if (fileName.StartsWith(fileProvider.Root))
+                    {
+                        fileName = fileName.Substring(fileProvider.Root.Length);
+                    }
 
                     var changeToken = fileProvider.Watch(fileName);
 
@@ -65,6 +70,11 @@ namespace Agility.Web.Caching
             var lastSlash = filePath.LastIndexOf('/');
 
             var fileName = filePath.Substring(lastSlash + 1);
+
+            if (fileName.StartsWith(fileProvider.Root))
+            {
+                fileName = fileName.Substring(fileProvider.Root.Length);
+            }
 
             var changeToken = fileProvider.Watch(fileName);
 

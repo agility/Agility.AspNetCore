@@ -4,6 +4,7 @@ using Agility.Web.Objects;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc;
 using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -11,7 +12,7 @@ namespace Agility.Web.Mvc.ViewComponents
 {
     public class AgilityCSS : ViewComponent
     {
-		public HtmlString InvokeAsync()
+		public async Task<HtmlString> InvokeAsync()
 		{
 			AgilityContext.HttpContext = HttpContext;
 

@@ -1,30 +1,16 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace Agility.Web.Extensions
 {
 	public static class DateTimeExtension
 	{
 
-        private static readonly TimeZoneInfo EastTimeZone = TimeZoneInfo.GetSystemTimeZones().Any(x => x.Id == "Eastern Standard Time") ?
-            TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time") :
-            TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
-
-        public static DateTime ConvertToEasternStandardTime(this DateTime date)
-        {
-            var result = date;
-            
-            if (TimeZoneInfo.Local.Id != EastTimeZone.Id)
-            {
-                result = TimeZoneInfo.ConvertTime(date, EastTimeZone);
-            }
-
-            return result;
-        }
-
 		public static string GetRFC822Date(this DateTime date)
 		{
-			int offset = TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).Hours;
+			int offset = TimeZone.CurrentTimeZone.GetUtcOffset(DateTime.Now).Hours;
 			string timeZone = "+" + offset.ToString().PadLeft(2, '0');
 
 			if (offset < 0)

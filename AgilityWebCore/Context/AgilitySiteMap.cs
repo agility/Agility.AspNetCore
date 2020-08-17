@@ -1,6 +1,12 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
+using System.Text;
 using System.Xml;
+using System.Web;
+
+using System.Security.Permissions;
+using System.Collections.Specialized;
 using Agility.Web.AgilityContentServer;
 using Agility.Web.Tracing;
 using Agility.Web.Objects;
@@ -245,7 +251,7 @@ namespace Agility.Web
 						CacheDependency cd = new CacheDependency(null, new string[] { cacheKey });
 						if (AgilityContext.CurrentMode == Agility.Web.Enum.Mode.Staging || AgilityContext.IsPreview)
 						{
-							string filename = BaseCache.GetFilePathForItem(itemKey, AgilityContext.WebsiteName);
+							string filename = BaseCache.GetFilePathForItemKey(itemKey, AgilityContext.WebsiteName, transientPath: true);
 							if (File.Exists(filename))
 							{
 								cd = new CacheDependency(new string[] { filename }, null);
@@ -777,6 +783,8 @@ namespace Agility.Web
 			node.PageItemID = picID;
 			//add the other attribute values into the AgilitySiteMapNode
 			//node["tempUrl"] = url;
+
+			bool addedTarget = false;
 
 			foreach (XmlAttribute att in elem.Attributes)
 			{

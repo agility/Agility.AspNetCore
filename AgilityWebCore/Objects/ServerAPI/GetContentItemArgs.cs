@@ -1,4 +1,9 @@
-﻿namespace Agility.Web.Objects.ServerAPI
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+
+namespace Agility.Web.Objects.ServerAPI
 {
     public class GetContentItemArgs
     {

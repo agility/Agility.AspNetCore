@@ -1,7 +1,11 @@
 ﻿using Agility.Web.Caching;
 using Agility.Web.Configuration;
+using Agility.Web.Objects;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -9,7 +13,7 @@ namespace Agility.Web.Mvc.ViewComponents
 {
     public class AgilityBottomScripts : ViewComponent
     {
-		public HtmlString InvokeAsync()
+		public async Task<HtmlString> InvokeAsync()
 		{
 			AgilityContext.HttpContext = HttpContext;
 

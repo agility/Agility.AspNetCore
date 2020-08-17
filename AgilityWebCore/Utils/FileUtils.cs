@@ -86,7 +86,7 @@ namespace Agility.Web.Utils
                                     break;
                                 }
                             }
-                            catch (Exception)
+                            catch (Exception ex)
                             {
                                 //ignore any types we don't have access to load...
                             }

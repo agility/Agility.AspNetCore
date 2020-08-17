@@ -1,4 +1,5 @@
-﻿namespace Agility.Web.Extensions
+﻿
+namespace Agility.Web.Extensions
 {
     public static class IntegerExtensions
     {

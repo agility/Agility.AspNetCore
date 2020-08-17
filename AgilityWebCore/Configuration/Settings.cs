@@ -1,5 +1,16 @@
 using System;
+using System.Collections.Generic;
+
+using System.Text;
+using System.Configuration;
+using System.Web;
+
+using Agility.Web;
+using Agility.Web.Exceptions;
 using System.IO;
+using System.Reflection;
+using System.Xml;
+using System.Security;
 using System.Threading;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Hosting;
@@ -47,7 +58,7 @@ namespace Agility.Web.Configuration
 							_currentSettings = settings;
 
 						}
-						catch(Exception)
+						catch(Exception ex)
 						{
 							throw;
 						}
@@ -186,6 +197,38 @@ namespace Agility.Web.Configuration
 		/// Gets/sets the ContentCacheFilePath settings.  This is the location where any files will be cached to disk.
 		/// </summary>		
 		public string ContentCacheFilePath { get; set; }
+
+
+		private string _transientCacheFilePath = null;
+		/// <summary>
+		/// Gets/sets the file path for transient cache.  This is the mirror that will be used for faster file access.
+		/// </summary>
+		public string TransientCacheFilePath 
+		{ 
+			get 
+			{
+				if (string.IsNullOrWhiteSpace(_transientCacheFilePath)) return ContentCacheFilePath;
+				return _transientCacheFilePath;
+			}
+
+			set 
+			{
+				_transientCacheFilePath = value;
+			} 
+		}
+
+		public string RootedTransientCacheFilePath
+		{
+			get
+			{
+				if (!string.IsNullOrEmpty(TransientCacheFilePath) && !Path.IsPathRooted(TransientCacheFilePath))
+				{
+					return $"{Directory.GetCurrentDirectory()}/{TransientCacheFilePath}";
+				} 
+
+				return TransientCacheFilePath;
+			}
+		}
 
 		public string RootedContentCacheFilePath {
 			get {

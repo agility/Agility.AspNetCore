@@ -1,4 +1,7 @@
-﻿namespace Agility.Web.Extensions
+﻿using System.Collections.Generic;
+using System.Linq;
+
+namespace Agility.Web.Extensions
 {
     public static class AgilityContentItemExtensions
     {  
@@ -41,7 +44,7 @@
                     link.Target = properties["target"];
                     link.Href = properties["href"];
                 }
-                catch (System.Exception)
+                catch (System.Exception ex)
                 {
                     link = null;
                 }

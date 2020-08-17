@@ -1,7 +1,10 @@
-﻿using Agility.Web.Objects;
+﻿using Agility.Web.Caching;
+using Agility.Web.Configuration;
+using Agility.Web.Objects;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,7 +13,7 @@ namespace Agility.Web.Mvc.ViewComponents
 {
     public class AgilityTopScripts : ViewComponent
     {
-		public HtmlString InvokeAsync()
+		public async Task<HtmlString> InvokeAsync()
 		{
 			AgilityContext.HttpContext = HttpContext;
 
@@ -22,6 +25,11 @@ namespace Agility.Web.Mvc.ViewComponents
 			}
 
 			StringBuilder sb = new StringBuilder(Environment.NewLine);
+
+			string scriptTopGlobal;
+			string scriptBottomGlobal;
+
+			string scriptBottomPage = null;
 
 			//output the id of any page a/b test experiments
 
@@ -85,10 +93,11 @@ namespace Agility.Web.Mvc.ViewComponents
 				//global script
 				if (!string.IsNullOrEmpty(AgilityContext.Domain.StatsTrackingScript))
 				{
-					var scriptTopGlobal = AgilityContext.Domain.StatsTrackingScript;
+					scriptTopGlobal = AgilityContext.Domain.StatsTrackingScript;
 
 					if (scriptTopGlobal.IndexOf(AgilityHelpers.GLOBAL_SCRIPT_SEPARATOR) != -1)
 					{
+						scriptBottomGlobal = scriptTopGlobal.Substring(scriptTopGlobal.IndexOf(AgilityHelpers.GLOBAL_SCRIPT_SEPARATOR) + AgilityHelpers.GLOBAL_SCRIPT_SEPARATOR.Length);
 						scriptTopGlobal = scriptTopGlobal.Substring(0, scriptTopGlobal.IndexOf(AgilityHelpers.GLOBAL_SCRIPT_SEPARATOR));
 					}
 
@@ -110,6 +119,7 @@ namespace Agility.Web.Mvc.ViewComponents
 
 				if (scriptTopPage.IndexOf(AgilityHelpers.GLOBAL_SCRIPT_SEPARATOR) != -1)
 				{
+					scriptBottomPage = scriptTopPage.Substring(scriptTopPage.IndexOf(AgilityHelpers.GLOBAL_SCRIPT_SEPARATOR) + AgilityHelpers.GLOBAL_SCRIPT_SEPARATOR.Length);
 					scriptTopPage = scriptTopPage.Substring(0, scriptTopPage.IndexOf(AgilityHelpers.GLOBAL_SCRIPT_SEPARATOR));
 				}
 

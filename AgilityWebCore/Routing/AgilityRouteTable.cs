@@ -125,7 +125,7 @@ namespace Agility.Web.Routing
 				}
 				else 
 				{ 
-					string filename = BaseCache.GetFilePathForItem(sitemap, AgilityContext.WebsiteName);
+					string filename = BaseCache.GetFilePathForItem(sitemap, AgilityContext.WebsiteName, transientPath: true);
 					bool exists = File.Exists(filename);
 					dep = new CacheDependency(filename);
 				}
@@ -271,7 +271,23 @@ namespace Agility.Web.Routing
 						routeItem = testRouteItem;
 						continue;
 					}
-                    
+
+
+					//todo...
+					////check if this page is routing to a dynamic page redirect... (/path/dynamic-page/item-[contentid]
+					//if (!string.IsNullOrEmpty(page.DynamicPageContentViewReferenceName)
+					//	|| !string.IsNullOrEmpty(page.DynamicPageParentFieldName))
+					//{
+					//	if (pathParts.Length == pathIndex + 1)
+					//	{
+
+					//		xxx
+
+					//		//check for item- in the last part of the path to see if this is a redirect...
+					//	}
+					//}
+
+					
 					parentPage = new ResolvedPage(page);
 					lstResolvedPages.Add(parentPage);
 

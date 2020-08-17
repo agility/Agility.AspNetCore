@@ -9,7 +9,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using Agility.Web.Extensions;
 
 namespace Agility.Web.Sync
 {
@@ -20,10 +19,7 @@ namespace Agility.Web.Sync
         private static bool _isThreadQueued;
         private static bool _isClearCacheRequested;
         private static bool _isSyncInProgress = false;
-        //private static System.Security.Principal.WindowsIdentity _applicationIdentity;
-
-
-
+        
         private static Thread _workerThread = null;
         private static object lockObj = new object();
 
@@ -44,13 +40,20 @@ namespace Agility.Web.Sync
                 string websiteName = AgilityContext.WebsiteName;
                 string fileName = "CacheInProgress.log";
 
-#if NET35
-                string path = Path.Combine(Current.Settings.ContentCacheFilePath, websiteName);
-
-                return Path.Combine(path, fileName);
-#else
                 return Path.Combine(Current.Settings.ContentCacheFilePath, websiteName, fileName);
-#endif
+
+            }
+        }
+
+        private static string syncStateFileName
+        {
+            get
+            {
+                string websiteName = AgilityContext.WebsiteName;
+                string fileName = "SyncState.txt";
+
+                return Path.Combine(Current.Settings.ContentCacheFilePath, websiteName, fileName);
+
             }
         }
 
@@ -108,6 +111,37 @@ namespace Agility.Web.Sync
                 }
 
                 return false;
+            }
+        }
+
+        internal static long SyncState
+        {
+            get
+            {
+
+                long ret = -1;
+                string path = syncStateFileName;
+                if (File.Exists(path))
+                {
+                    string content = File.ReadAllText(path);
+                    long.TryParse(content, out ret);
+                }
+                return ret;
+
+            }
+
+            set
+            {
+                string path = syncStateFileName;
+
+                string dir = Path.GetDirectoryName(path);
+                if (!Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
+                File.WriteAllText(path, value.ToString());
+
             }
         }
 
@@ -285,6 +319,11 @@ namespace Agility.Web.Sync
                     return;
                 }
 
+                //check if Eastern Standard Time exists, otherwise we are in linux
+                TimeZoneInfo eastTimeZone = TimeZoneInfo.GetSystemTimeZones().Any(x => x.Id == "Eastern Standard Time") ?
+                    TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time") :
+                    TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+
                 AgilityItemStatus domainStatus = null;
 
                 Dictionary<int, List<string>> contentRefIndex = null;
@@ -325,9 +364,9 @@ namespace Agility.Web.Sync
                         try
                         {
 
-                            //get the filepath for the item
+                            //get the filepath for the item (from persistent cache)
                             string contentCacheKey = BaseCache.GetCacheKey(item);
-                            string filepath = BaseCache.GetFilePathForItem(item, websiteName);
+                            string filepath = BaseCache.GetFilePathForItem(item, websiteName, transientPath: false);
 
 
                             //process the other instance first...
@@ -508,8 +547,13 @@ namespace Agility.Web.Sync
                                             }
                                         }
 
-                                        accessDate = accessDate.ConvertToEasternStandardTime();
-                                        
+
+                                        if (TimeZoneInfo.Local.Id != eastTimeZone.Id)
+                                        {
+                                            //HACK: convert the access date to EST
+                                            accessDate = TimeZoneInfo.ConvertTime(accessDate, eastTimeZone);
+                                        }
+
                                         string refName = ((AgilityContent)item).ReferenceName;
 
                                         if (debugSync) WebTrace.WriteWarningLine(string.Format("Getting delta: {0}, lang={1}, date:{2}", refName, item.LanguageCode, accessDate));
@@ -569,7 +613,7 @@ namespace Agility.Web.Sync
                                                     //FILE STORAGE
 
                                                     //resolve the attachment filename
-                                                    string attachmentFilePath = BaseCache.GetFilePathForItem(itemKey, websiteName);
+                                                    string attachmentFilePath = BaseCache.GetFilePathForItemKey(itemKey, websiteName, transientPath: false);
 
                                                     //check to see if it is already there or not 
                                                     //unless we are doing a clear all cache
@@ -695,8 +739,13 @@ namespace Agility.Web.Sync
                                             accessDate = existingItem.LastAccessDate;
                                         }
 
-                                        accessDate.ConvertToEasternStandardTime();
-                                        
+                                        //get the dataset for the content
+                                        if (TimeZoneInfo.Local.Id != eastTimeZone.Id)
+                                        {
+                                            //HACK: convert the access date to EST
+                                            accessDate = TimeZoneInfo.ConvertTime(item.LastAccessDate, eastTimeZone);
+                                        }
+
                                         AgilityTagList tagList = client.SelectTagsAsync(auth, item.LanguageCode, accessDate).Result.SelectTagsResult;
                                         if (tagList != null)
                                         {
@@ -750,7 +799,12 @@ namespace Agility.Web.Sync
                                             accessDate = existingItem.LastAccessDate;
                                         }
 
-                                        accessDate = accessDate.ConvertToEasternStandardTime();
+                                        //get the dataset for the content
+                                        if (TimeZoneInfo.Local.Id != eastTimeZone.Id)
+                                        {
+                                            //HACK: convert the access date to EST
+                                            accessDate = TimeZoneInfo.ConvertTime(item.LastAccessDate, eastTimeZone);
+                                        }
 
                                         AgilityAssetMediaGroup group = client.SelectAssetMediaGroupDeltaAsync(auth, item.ID, accessDate).Result.SelectAssetMediaGroupDeltaResult;
                                         if (group != null)
@@ -892,7 +946,7 @@ namespace Agility.Web.Sync
 
                 string channelsCacheKey = BaseCache.GetCacheKey(channelKey);
                 string tempChannelsFilePath = BaseCache.GetTempFilePathForItem(channelKey, websiteName);
-                string channelsFilePath = BaseCache.GetFilePathForItem(channelKey, websiteName);
+                string channelsFilePath = BaseCache.GetFilePathForItemKey(channelKey, websiteName, transientPath: false);
 
                 AgilityDigitalChannelList lstChannels = null;
 
@@ -914,7 +968,11 @@ namespace Agility.Web.Sync
                 {
                     channelLastAccessDate = lstChannels.LastAccessDate;
 
-                    channelLastAccessDate = channelLastAccessDate.ConvertToEasternStandardTime();
+                    if (TimeZoneInfo.Local.Id != eastTimeZone.Id)
+                    {
+                        //HACK: convert the access date to EST		
+                        channelLastAccessDate = TimeZoneInfo.ConvertTime(channelLastAccessDate, eastTimeZone);
+                    }
                 }
 
                 AgilityDigitalChannelList lstChannelsDownload = client.GetDigitalChannelsAsync(auth, channelLastAccessDate).Result.GetDigitalChannelsResult;
@@ -950,7 +1008,7 @@ namespace Agility.Web.Sync
                 string indexCacheKey = BaseCache.GetCacheKey(key);
 
                 string tempIndexFilePath = BaseCache.GetTempFilePathForItem(key, websiteName);
-                string indexFilePath = BaseCache.GetFilePathForItem(key, websiteName);
+                string indexFilePath = BaseCache.GetFilePathForItemKey(key, websiteName, transientPath: false);
 
                 NameIndex contentDefIndex = null;
 
@@ -971,7 +1029,11 @@ namespace Agility.Web.Sync
                 {
                     lastAccessDate = contentDefIndex.LastAccessDate;
 
-                    lastAccessDate = lastAccessDate.ConvertToEasternStandardTime();
+                    if (TimeZoneInfo.Local.Id != eastTimeZone.Id)
+                    {
+                        //HACK: convert the access date to EST		
+                        lastAccessDate = TimeZoneInfo.ConvertTime(lastAccessDate, eastTimeZone);
+                    }
                 }
 
                 NameIndex contentDefIndexDownload = client.GetContentDefinitionIndexAsync(auth, lastAccessDate).Result.GetContentDefinitionIndexResult;
@@ -1005,7 +1067,7 @@ namespace Agility.Web.Sync
                                 moduleKey.Key = defID;
                                 moduleKey.ItemType = typeof(AgilityModule).Name;
 
-                                string defFilePath = BaseCache.GetFilePathForItem(moduleKey, websiteName);
+                                string defFilePath = BaseCache.GetFilePathForItemKey(moduleKey, websiteName, transientPath: false);
                                 string defCacheKey = BaseCache.GetCacheKey(moduleKey);
 
                                 AgilityModule def = null;
@@ -1053,7 +1115,7 @@ namespace Agility.Web.Sync
                 indexCacheKey = BaseCache.GetCacheKey(key);
 
                 tempIndexFilePath = BaseCache.GetTempFilePathForItem(key, websiteName);
-                indexFilePath = BaseCache.GetFilePathForItem(key, websiteName);
+                indexFilePath = BaseCache.GetFilePathForItemKey(key, websiteName, transientPath: false);
 
                 NameIndex sharedContentIndex = null;
                 if (AgilityContext.ContentAccessor != null)
@@ -1072,7 +1134,11 @@ namespace Agility.Web.Sync
                 {
                     lastAccessDate = sharedContentIndex.LastAccessDate;
 
-                    lastAccessDate = lastAccessDate.ConvertToEasternStandardTime();
+                    if (TimeZoneInfo.Local.Id != eastTimeZone.Id)
+                    {
+                        //HACK: convert the access date to EST		
+                        lastAccessDate = TimeZoneInfo.ConvertTime(lastAccessDate, eastTimeZone);
+                    }
                 }
 
                 NameIndex sharedContentIndexDownload = client.GetSharedContentIndexAsync(auth, lastAccessDate).Result.GetSharedContentIndexResult;
@@ -1107,7 +1173,7 @@ namespace Agility.Web.Sync
 
                 string cacheKey = BaseCache.GetCacheKey(key);
                 string tempFilePath = BaseCache.GetTempFilePathForItem(key, websiteName);
-                string filePath = BaseCache.GetFilePathForItem(key, websiteName);
+                string filePath = BaseCache.GetFilePathForItemKey(key, websiteName, transientPath: false);
 
                 AgilityUrlRedirectionList urlRedirectionList = null;
 
@@ -1127,7 +1193,11 @@ namespace Agility.Web.Sync
                 {
                     lastAccessDate = urlRedirectionList.LastAccessDate;
 
-                    lastAccessDate = lastAccessDate.ConvertToEasternStandardTime();
+                    if (TimeZoneInfo.Local.Id != eastTimeZone.Id)
+                    {
+                        //HACK: convert the access date to EST		
+                        lastAccessDate = TimeZoneInfo.ConvertTime(lastAccessDate, eastTimeZone);
+                    }
                 }
 
                 var redirectRes = client.SelectUrlRedirectionsDeltaAsync(auth, lastAccessDate).Result;
@@ -1166,7 +1236,7 @@ namespace Agility.Web.Sync
 
                 string experimentCacheKey = BaseCache.GetCacheKey(key);
                 string experimentTempFilePath = BaseCache.GetTempFilePathForItem(key, websiteName);
-                string experimentfilePath = BaseCache.GetFilePathForItem(key, websiteName);
+                string experimentfilePath = BaseCache.GetFilePathForItemKey(key, websiteName, transientPath: false);
 
                 AgilityExperimentListing experimentList = null;
 
@@ -1186,7 +1256,11 @@ namespace Agility.Web.Sync
                 {
                     lastAccessDate = experimentList.LastAccessDate;
 
-                    lastAccessDate = lastAccessDate.ConvertToEasternStandardTime();
+                    if (TimeZoneInfo.Local.Id != eastTimeZone.Id)
+                    {
+                        //HACK: convert the access date to EST		
+                        lastAccessDate = TimeZoneInfo.ConvertTime(lastAccessDate, eastTimeZone);
+                    }
                 }
                 else
                 {
@@ -1465,6 +1539,9 @@ namespace Agility.Web.Sync
 
             _workerThread = null;
             IsSyncInProgress = false;
+
+            SyncState = (long)(DateTime.Now - DateTime.UnixEpoch).TotalSeconds;
+
             WebTrace.WriteInfoLine("Sync Thread: End");
         }
 

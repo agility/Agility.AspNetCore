@@ -1,12 +1,15 @@
 ﻿using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Agility.Web.Mvc.ViewComponents
 {
     public class RichTextArea : ViewComponent
     {
-		public HtmlString InvokeAsync(AgilityContentItem item)
+		public async Task<HtmlString> InvokeAsync(AgilityContentItem item)
 		{
 			AgilityContext.HttpContext = HttpContext;
 

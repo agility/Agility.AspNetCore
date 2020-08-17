@@ -109,7 +109,7 @@ namespace Agility.Web
 							defaultSort = null;
 						}
 					}
-					catch (Exception)
+					catch (Exception ex)
 					{
 						defaultSort = null;
 					}

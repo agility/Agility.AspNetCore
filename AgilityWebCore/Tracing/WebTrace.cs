@@ -133,7 +133,7 @@ namespace Agility.Web.Tracing
                 if (AgilityContext.HttpContext != null
                     && Current.Settings != null
                     && Current.Settings.Trace != null
-                    //implement trace types 
+                    //TODO: implement trace types 
                     //&& Current.Settings.Trace.ErrorTraceTypes != null
                     )
                 {
@@ -330,7 +330,7 @@ namespace Agility.Web.Tracing
                         //if (SyncThread.ApplicationIdentity != null && SyncThread.ApplicationIdentity.Name != System.Security.Principal.WindowsIdentity.GetCurrent().Name)
                         //{
 
-                        //	//check sync thread impersonation....
+                        //	//TODO: check sync thread impersonation....
                         //	//WindowsImpersonationContext wi = SyncThread.ApplicationIdentity.Impersonate();
                         //}
 
@@ -431,7 +431,7 @@ namespace Agility.Web.Tracing
                     //check the the current identity is the same is the impersonated one...
                     //if (SyncThread.ApplicationIdentity != null && SyncThread.ApplicationIdentity.Name != System.Security.Principal.WindowsIdentity.GetCurrent().Name)
                     //{
-                    //	//check sync thread impersonation
+                    //	//TODO: check sync thread impersonation
                     //	//WindowsImpersonationContext wi = SyncThread.ApplicationIdentity.Impersonate();
                     //}
 

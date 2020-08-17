@@ -3,13 +3,22 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Text;
 using System.Web;
+
 using System.Globalization;
 using Agility.Web.Tracing;
 using Agility.Web.Objects;
 using System.IO;
 using Agility.Web.Configuration;
 using System.Security.Cryptography;
+using System.Configuration;
+using System.Xml;
+using System.Data;
+using Agility.Web.Exceptions;
+using System.Collections;
 using System.Collections.Specialized;
+using System.Text.RegularExpressions;
+using System.Net.Mail;
+using System.Reflection;
 using Agility.Web.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -80,7 +89,7 @@ namespace Agility.Web.HttpModules
 			if (Current.Settings.DevelopmentMode)
 			{
 				//turn on refresh mode for this request...
-				//AgilityContext.RefreshStagingModeDataOnDomain = true;
+				//HACK AgilityContext.RefreshStagingModeDataOnDomain = true;
 
 				//write out a link to the log
 				sb.Append("<div style='margin-left: 60px; width: 800px; '>");
@@ -248,12 +257,7 @@ namespace Agility.Web.HttpModules
 
 				Config = Data.GetConfig();
 
-//TODO: double check that the offline thread should run like this...
-				//initialize the offline processing...
-				if (!OfflineProcessing.IsOfflineThreadRunning)
-				{
-					OfflineProcessing.StartOfflineThread();
-				}
+				
 
 
 			//}
@@ -347,7 +351,7 @@ namespace Agility.Web.HttpModules
 			RedirectResponse(url, statusCode, string.Empty);
 		}
 
-		internal static void RedirectResponse(string url, int statusCode, string content)
+		internal async static void RedirectResponse(string url, int statusCode, string content)
 		{
 			var response = AgilityContext.HttpContext.Response;
 
@@ -631,7 +635,274 @@ namespace Agility.Web.HttpModules
 			
 		}
 		
-        
+
+		/// <summary>
+		/// Respond to an RSS request in the following format:
+		/// ecmsrss.aspx/ContentReferenceName.xml?lang=en-us&sort=EXPRESSION&count=5&filter=EXPRESSION&link=~/default.aspx&query=contentid?titleField=title&authorField=author&categoryField=category
+		/// </summary>
+		/// <param name="context"></param>
+		/// <param name="request"></param>
+		/// <param name="response"></param>
+		//internal static void HandleAgilityRssRequest(HttpContext context, HttpRequest request, HttpResponse response)
+		//{
+		//	try
+		//	{
+				
+
+		//		//get content name from the PathInfo
+		//		string contentReferenceName = request.PathInfo.ToLowerInvariant();
+
+		//		if (string.IsNullOrEmpty(contentReferenceName))
+		//		{
+		//			contentReferenceName = request.QueryString["content"];
+		//		}
+
+		//		if (string.IsNullOrEmpty(contentReferenceName))
+		//		{
+		//			contentReferenceName = request.FilePath;
+		//			int index = contentReferenceName.IndexOf(ECMS_RSS_KEY, StringComparison.InvariantCultureIgnoreCase) + ECMS_DOCUMENTS_KEY.Length;
+		//			if (contentReferenceName.Length > index)
+		//			{
+		//				contentReferenceName = contentReferenceName.Substring(index, contentReferenceName.Length - index);
+		//			}
+		//			else
+		//			{
+		//				contentReferenceName = string.Empty;
+		//			}
+
+		//		}
+
+
+		//		if (string.IsNullOrEmpty(contentReferenceName))
+		//		{
+		//			throw new HttpException(404, "The content name was not provided on the URL");
+		//		}
+
+		//		if (contentReferenceName.StartsWith("/")) contentReferenceName = contentReferenceName.Substring(1);
+		//		if (contentReferenceName.EndsWith(".xml")) contentReferenceName = contentReferenceName.Substring(0, contentReferenceName.Length - 4);
+
+		//		string lang = AgilityContext.LanguageCode;
+
+		//		//get the lang from the url if neccessary
+		//		if (!string.IsNullOrEmpty(request.QueryString["lang"]))
+		//		{
+		//			if (-1 != Array.FindIndex<Language>(AgilityContext.Domain.Languages,
+		//					delegate(Language l2)
+		//					{
+		//						return string.Compare(l2.LanguageCode, request.QueryString["lang"], true) == 0;
+		//					}))
+		//			{
+		//				lang = request.QueryString["lang"];
+		//			}
+		//		}
+
+		//		//get the content
+		//		AgilityContentServer.AgilityContent content = BaseCache.GetContent(contentReferenceName, lang, AgilityContext.WebsiteName, true);
+		//		if (content == null)
+		//		{
+		//			response.Clear();
+		//			response.Write(string.Format("The content reference name {0} for the rss output could not be found.", contentReferenceName));
+		//			response.StatusCode = 404;
+		//			return;
+		//		}
+
+		//		if (content.DisableRSSOutput)
+		//		{
+		//			response.Clear();
+		//			response.Write(string.Format("The content with reference name {0} is not enabled for RSS output.", contentReferenceName));
+		//			response.StatusCode = 404;
+		//			return;
+		//		}
+
+		//		response.ContentType = "application/xml";
+
+		//		XmlTextWriter x = new XmlTextWriter(response.Output);
+
+		//		x.WriteStartDocument();
+
+		//		x.WriteStartElement("rss");
+		//		x.WriteAttributeString("version", "2.0");
+		//		x.WriteStartElement("channel");
+
+
+		//		string title = request.QueryString["title"];
+		//		string desc = request.QueryString["desc"];
+		//		string img = request.QueryString["img"];
+		//		if (string.IsNullOrEmpty(title))
+		//		{
+		//			title = content.Name;
+		//		}
+				  
+		//		if (string.IsNullOrEmpty(desc))
+		//		{
+		//			desc = string.Format("{0} - {1}", AgilityContext.WebsiteName, content.Name);
+		//		}
+
+		//		x.WriteElementString("title", title);
+		//		x.WriteElementString("description", desc);
+
+		//		if (!string.IsNullOrEmpty(img))
+		//		{
+		//			x.WriteStartElement("image");
+		//			x.WriteElementString("url", img);
+		//			x.WriteEndElement();
+		//		}
+
+				
+		//		string link = null;
+		//		string queryStringVar = "id";
+
+		//		if (!string.IsNullOrEmpty(request.QueryString["link"]))
+		//		{
+		//			link = request.QueryString["link"];
+		//			if (link.StartsWith("~/"))
+		//			{
+		//				link = (request.ApplicationPath.EndsWith("/") ? request.ApplicationPath : request.ApplicationPath + "/") + link.Substring(2);
+
+		//			}
+		//			if (!string.IsNullOrEmpty(request.QueryString["query"]))
+		//			{
+		//				queryStringVar = request.QueryString["query"];
+		//			}
+
+
+		//			x.WriteElementString("link", link);
+		//		}
+
+
+
+		//		x.WriteElementString("language", lang);
+		//		x.WriteElementString("generator", "Agility CMS");
+
+
+		//		//lastBuildDate
+		//		if (content.LastAccessDate != DateTime.MinValue)
+		//		{
+		//			x.WriteElementString("lastBuildDate", content.LastAccessDate.GetRFC822Date());
+		//		}
+
+		//		//get the items based on the given sort and filter
+		//		DataView dv = new DataView(content.DataSet.Tables["ContentItems"], request.QueryString["filter"], request.QueryString["sort"], DataViewRowState.CurrentRows);
+
+		//		string titleField = request.QueryString["titleField"];
+		//		string descriptionField = request.QueryString["descriptionField"];
+		//		string dateField = request.QueryString["dateField"];
+
+		//		string authorField = request.QueryString["authorField"];
+		//		if (string.IsNullOrEmpty(authorField)) authorField = "Author";
+
+		//		string categoryField = request.QueryString["categoryField"];
+		//		if (string.IsNullOrEmpty(categoryField)) categoryField = "Category";
+
+
+		//		int count = 0;
+		//		if (!int.TryParse(request.QueryString["count"], out count) || count > dv.Count)
+		//		{
+		//			count = dv.Count;
+		//		}
+
+		//		for (int i = 0; i < count; i++)
+		//		{
+
+		//			DataRowView drv = dv[i];
+		//			AgilityContentServer.ContentDataSet.ContentItemsRow row = drv.Row as AgilityContentServer.ContentDataSet.ContentItemsRow;
+
+		//			x.WriteStartElement("item");
+
+
+		//			//title
+		//			x.WriteStartElement("title");
+
+		//			if (string.IsNullOrEmpty(titleField))
+		//			{
+		//				x.WriteCData(string.Format("{0}", row["Title"]));
+		//			}
+		//			else if (dv.Table.Columns.Contains(titleField))
+		//			{
+		//				x.WriteCData(string.Format("{0}", row[titleField]));
+		//			}
+		//			x.WriteEndElement();
+
+		//			//author
+		//			if (dv.Table.Columns.Contains(authorField))
+		//			{
+		//				x.WriteStartElement("author");
+		//				x.WriteCData(string.Format("{0}", row[authorField]));
+		//				x.WriteEndElement();
+		//			}
+
+		//			//category
+		//			if (dv.Table.Columns.Contains(categoryField))
+		//			{
+		//				x.WriteStartElement("category");
+		//				x.WriteCData(string.Format("{0}", row[categoryField]));
+		//				x.WriteEndElement();
+		//			}
+
+
+		//			//link
+		//			if (link != null)
+		//			{
+		//				string urlLink = Agility.Web.Util.Url.AppendQueryString(link, queryStringVar + "=" + row.ContentID);
+		//				x.WriteElementString("link", urlLink);
+		//			}
+
+		//			x.WriteStartElement("description");
+
+		//			if (string.IsNullOrEmpty(descriptionField))
+		//			{
+		//				x.WriteCData(string.Format("{0}", row["TextBlob"]));
+		//			}
+		//			else if (dv.Table.Columns.Contains(descriptionField))
+		//			{
+		//				x.WriteCData(string.Format("{0}", row[descriptionField]));
+		//			}
+
+		//			x.WriteEndElement();
+  //                  if (string.IsNullOrEmpty(dateField))
+  //                  {
+  //                      x.WriteElementString("pubDate", row.CreatedDate.GetRFC822Date());
+  //                  }
+  //                  else
+  //                  {
+		//				object o = row[dateField];
+		//				if (o is DateTime) {
+		//					x.WriteElementString("pubDate", ((DateTime)o).GetRFC822Date());
+		//				} else {					
+		//					x.WriteElementString("pubDate", string.Format("{0}", o));
+  //                      }
+  //                  }
+
+
+		//			x.WriteEndElement(); //item
+
+		//		}
+
+		//		x.WriteEndElement(); //channel
+
+		//		x.WriteEndElement(); //rss
+
+		//	}
+		//	catch (HttpException hex)
+		//	{
+		//		WebTrace.WriteWarningLine(hex.Message);
+
+		//		//if we get this far, there was no content, or no data to stream: return a 404	
+		//		response.StatusCode = hex.GetHttpCode();
+		//		response.StatusDescription = hex.Message;
+		//	}
+		//	catch (Exception ex)
+		//	{
+		//		WebTrace.WriteException(ex);
+
+		//		//if we get this far, there was no file, or no data to stream: return a 404	
+		//		response.StatusCode = 500;
+		//		response.StatusDescription = "The rss xml data not be loaded.";
+		//	}
+
+			
+		//}
+		
 		internal async static void HandleErrorsRequest(HttpContext context, HttpRequest request, HttpResponse response)
 		{
 			try
@@ -779,7 +1050,7 @@ namespace Agility.Web.HttpModules
 
 			string absoluteUrlTest = AgilityContext.HttpContext.Request.GetEncodedUrl().ToLowerInvariant().TrimEnd('/');
 			string langCodeInPath = string.Format("/{0}/", AgilityContext.LanguageCode).ToLower();
-			if (absoluteUrlTest.IndexOf(langCodeInPath, StringComparison.Ordinal) != -1)
+			if (absoluteUrlTest.IndexOf(langCodeInPath) != -1)
 			{
 				absoluteUrlTest = absoluteUrlTest.Replace(langCodeInPath, "/");
 			}
@@ -788,10 +1059,11 @@ namespace Agility.Web.HttpModules
 			string appRelativeUrlTest = string.Empty;
 			string appRelativeUrlTestWithQuery = string.Empty;
 			string query = string.Empty;
+			bool stripQueryString = false;
 
 			URLRedirection redirection = null;
 
-			int queryIndex = absoluteUrlTest.IndexOf("?", StringComparison.Ordinal);
+			int queryIndex = absoluteUrlTest.IndexOf("?");
 
 			if (queryIndex > -1)
 			{
@@ -837,6 +1109,7 @@ namespace Agility.Web.HttpModules
                         if (redirsWithQueryStrings.TryGetEscapedUri(appRelativeUrlTestWithQuery, out redirection))
 						{
 							//found a redirect with a query string - we need to remove querystrings from the current url when we redirect
+							stripQueryString = true;
 							sbTraceMessage.AppendFormat("Redirecting URL {0} to {1}.", appRelativeUrlTestWithQuery, redirection.RedirectURL);							
 						}
 					} 

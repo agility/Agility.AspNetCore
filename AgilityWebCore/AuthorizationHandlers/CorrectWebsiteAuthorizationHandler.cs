@@ -1,6 +1,10 @@
-﻿using Agility.Web.Requirements;
+﻿using Agility.Web.Configuration;
+using Agility.Web.Requirements;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Generic;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Agility.Web.AuthorizationHandlers

@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Agility.Web.HttpModules;
 using Agility.Web.Objects;
+using System.Web;
 using System.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
@@ -72,6 +75,14 @@ namespace Agility.Web.Mvc
                 HttpRequest Request = context.HttpContext.Request;
                 HttpResponse Response = context.HttpContext.Response;
 
+
+                //initialize the offline processing...
+
+                //HACK: OFFLINE: this should be started in the Startup
+                //if (!OfflineProcessing.IsOfflineThreadRunning)
+                //{
+                //    OfflineProcessing.StartOfflineThread();
+                //}
 
 
                 string url = UriHelper.GetEncodedUrl(Request);

@@ -1,7 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using Agility.Web.Objects;
+using Agility.Web;
+using System.IO;
 using Agility.Web.Tracing;
 using Agility.Web.HttpModules;
+using Agility.Web.Routing;
+using System.Data;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.Routing;
 
 namespace Agility.Web.Mvc
 {
@@ -31,7 +41,7 @@ namespace Agility.Web.Mvc
 				}
 				catch (Exception ex)
 				{
-					WebTrace.WriteException(ex);
+					Agility.Web.Tracing.WebTrace.WriteException(ex);
 				}
 
 				if (AgilityContext.IsResponseEnded)
@@ -59,7 +69,7 @@ namespace Agility.Web.Mvc
 			catch (Exception ex)
 			{
 				
-				WebTrace.WriteException(ex);
+				Agility.Web.Tracing.WebTrace.WriteException(ex);
 				AgilityHttpModule.HandleIntializationException(ex);
 				//TODO: AgilityOutputCacheModule.TurnOffCacheInProgress();
 				return new EmptyResult();

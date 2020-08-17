@@ -611,6 +611,8 @@ namespace Agility.Web
 
                     return response;
                 }
+
+                return null;
             }
             catch (Exception ex)
             {
@@ -651,6 +653,8 @@ namespace Agility.Web
 
 					return response;
 				}
+
+				return null;
 			}
 			catch (Exception ex)
 			{
@@ -693,6 +697,8 @@ namespace Agility.Web
 
 					return response;
 				}
+
+				return null;
 			}
 			catch (Exception ex)
 			{

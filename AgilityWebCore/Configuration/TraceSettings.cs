@@ -1,3 +1,11 @@
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Configuration;
+using System.Web;
+using System.Reflection;
+using System.IO;
+
 namespace Agility.Web.Configuration
 {
 	/// <summary>
@@ -16,6 +24,14 @@ namespace Agility.Web.Configuration
 		/// </summary>		
 		public TraceLevel TraceLevel { get; set; }
 		
+
+		/// <summary>
+		/// The collection of ErrorTraceType elements.
+		/// </summary>	
+		//HACK: public ErrorTraceCollection ErrorTraceTypes { get; set; }
+		
+
+		private static string _logFilePath = null;
 		/// <summary>
 		/// Gets/sets the path that will be used to store the log files for this application.
 		/// </summary>		

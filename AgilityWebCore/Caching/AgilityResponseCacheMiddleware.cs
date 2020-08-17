@@ -24,7 +24,23 @@ namespace Agility.Web.Caching
         public async Task Invoke(HttpContext context)
         {
 
+            //initialize the offline processing...
+            //HACK: OFFLINE: this should be started in the Startup
+            //if (!OfflineProcessing.IsOfflineThreadRunning)
+            //{
+            //    OfflineProcessing.StartOfflineThread();
+            //}
 
+
+            //Don't do ANYTHING if we are in preview mode, or if output cache is disabled
+            if (!string.IsNullOrWhiteSpace(context.Request.Query["agilitypreviewkey"])
+                || AgilityContext.IsPreview
+                || AgilityContext.CurrentMode == Agility.Web.Enum.Mode.Staging
+                || (AgilityContext.Domain != null && AgilityContext.Domain.EnableOutputCache == false))
+            {
+                await _next.Invoke(context);
+                return;
+            }
 
             string key = Data.GetAgilityVaryByCustomString(context);
 
@@ -56,6 +72,7 @@ namespace Agility.Web.Caching
                 {
                     TimeSpan serverCacheDuration = GetOutputCacheExpiration();
 
+                    //TODO: determine if we need to include AgilityContext.OutputCacheKeys here...
                     var depKeys = AgilityContext.OutputCacheDependencies;
 
                     CacheDependency dep = new CacheDependency(cacheKeys: depKeys.ToArray());
@@ -176,7 +193,7 @@ namespace Agility.Web.Caching
 			if (! string.IsNullOrWhiteSpace(context.Request.Query["agilitypreviewkey"])
 				|| AgilityContext.IsPreview
 				|| AgilityContext.CurrentMode == Agility.Web.Enum.Mode.Staging
-				|| !AgilityContext.Domain.EnableOutputCache)
+				|| (AgilityContext.Domain != null && AgilityContext.Domain.EnableOutputCache== false))
 			{
 				return false;
 			}

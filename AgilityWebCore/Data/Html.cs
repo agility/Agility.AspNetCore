@@ -45,17 +45,22 @@ namespace Agility.Web
         {
             string contentReferenceName = null;
             string ext = null;
+            string prefix = null;
 
             switch (FileType)
             {
                 case Web.FileType.CSS:
                     contentReferenceName = AgilityDynamicCodeFile.REFNAME_AgilityCSSFiles;
                     ext = ".css";
+                    prefix = "Content/css/";
                     break;
                 case Web.FileType.Javascript:
                     contentReferenceName = AgilityDynamicCodeFile.REFNAME_AgilityJavascriptFiles;
                     ext = ".js";
+                    prefix = "scripts/";
                     break;
+
+
             }
 
             if (referenceNames == null || referenceNames.Length == 0) return string.Empty;

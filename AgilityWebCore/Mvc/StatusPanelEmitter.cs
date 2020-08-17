@@ -2,6 +2,7 @@
 using Agility.Web.Configuration;
 using Agility.Web.Objects;
 using System;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 using System.Web;
@@ -42,6 +43,7 @@ namespace Agility.Web.Mvc
 
 			//Add the Style Sheets for the StatusBar and Edit In Place:
 			StringBuilder sb = new StringBuilder();
+			//HACK
 
 			bool isPublished = false;
 			bool containsUnpublishedModules = false;

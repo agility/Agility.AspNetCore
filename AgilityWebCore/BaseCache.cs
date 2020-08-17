@@ -3,12 +3,18 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Data;
 using System.Text;
+
 using Agility.Web.AgilityContentServer;
 using Agility.Web.Tracing;
+
+using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
+using System.Web;
+
 using System.Threading;
 using Agility.Web.Configuration;
 using System.Xml;
+using System.Runtime.Serialization;
 using System.ServiceModel;
 using System.Net;
 using Agility.Web.HttpModules;
@@ -16,10 +22,14 @@ using Agility.Web.Routing;
 using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
 using Agility.Web.Sync;
+using System.Reflection;
+using Agility.Web.Objects.ServerAPI;
 using Agility.Web.Caching;
 using Microsoft.Extensions.Caching.Memory;
+using Agility.Web.Mvc;
 using Microsoft.AspNetCore.Http.Extensions;
 using Newtonsoft.Json;
+using Agility.Web.Providers;
 
 namespace Agility.Web
 {
@@ -31,7 +41,13 @@ namespace Agility.Web
 
         internal const string DYNAMICPAGEFORMULAINDEX_FILENAME = "DynamicPageFormulaIndex";
         internal const string DYNAMICPAGEFORMULAINDEX_CACHEKEY = "agility_web_dynamicpageformulaindex";
-        
+
+        internal static readonly string PROTO_BUF_ASSEMBLY_NAME = "protobuf-net";
+        internal static readonly string PROTO_BUF_DATA_ASSEMBLY_NAME = "protobuf-net-data";
+
+        private static object serverLockObj = new object();
+        private static Semaphore _serverClientLockAccess = new Semaphore(3, 3);
+
         private static ReaderWriterLockSlim _dynamicPageIndexLock = new ReaderWriterLockSlim();
 		
         private static object _dynlockAccess = new object();
@@ -41,7 +57,7 @@ namespace Agility.Web
         {
 
             //wait for access the lock collection
-            ReaderWriterLockSlim fileLock;
+            ReaderWriterLockSlim fileLock = null;
 
             lock (_dynlockAccess)
             {
@@ -102,7 +118,7 @@ namespace Agility.Web
             binding.BypassProxyOnLocal = false;
 
 			//MOD: old setting -- binding.HostNameComparisonMode = HostNameComparisonMode.StrongWildcard;
-			binding.TextEncoding = Encoding.UTF8;
+			binding.TextEncoding = System.Text.Encoding.UTF8;
 			
             //MOD: old setting -- binding.MessageEncoding = WSMessageEncoding.Text;
             binding.TransferMode = TransferMode.Buffered;
@@ -120,12 +136,21 @@ namespace Agility.Web
             return client;
         }
 
+        static void InnerChannel_Closed(object sender, EventArgs e)
+        {
+            _countThreads--;
+            //_serverClientLockAccess.Release(1);
+        }
+		
         internal static AgilityContentServerClient GetAgilityServerClient()
         {
-            var serverClient = CreateContentServerClientInstance();
-            serverClient.InnerChannel.OperationTimeout = TimeSpan.FromMinutes(30);
+            AgilityContentServerClient _serverClient = null;
 
-            return serverClient;
+            _serverClient = CreateContentServerClientInstance();
+            _serverClient.InnerChannel.OperationTimeout = TimeSpan.FromMinutes(30);
+
+            return _serverClient;
+
         }
 
 
@@ -161,7 +186,7 @@ namespace Agility.Web
             string cacheKey = GetCacheKey(itemKey); // string.Format("{0}.TempCache", GetCacheKey(itemKey));
             AgilityDomainConfiguration domain = null;
 
-            if (AgilityContext.CurrentMode == Enum.Mode.Staging)
+            if (AgilityContext.CurrentMode == Agility.Web.Enum.Mode.Staging)
             {
 				//try to get the item from cache first
 				domain = AgilityCache.Get(cacheKey) as AgilityDomainConfiguration;
@@ -170,7 +195,7 @@ namespace Agility.Web
 
             domain = GetItem<AgilityDomainConfiguration>(itemKey, websiteName);
 
-            if (AgilityContext.CurrentMode == Enum.Mode.Staging)
+            if (AgilityContext.CurrentMode == Agility.Web.Enum.Mode.Staging)
             {
 				//put this in cache for 30 seconds in staging mode...
 				AgilityCache.Set(cacheKey, domain, TimeSpan.FromSeconds(30));
@@ -192,7 +217,7 @@ namespace Agility.Web
 
             AgilityDigitalChannelList channels = null;
 
-            if (AgilityContext.CurrentMode == Enum.Mode.Staging)
+            if (AgilityContext.CurrentMode == Agility.Web.Enum.Mode.Staging)
             {
                 //try to get the item from cache first
                 channels = AgilityCache.Get(cacheKey) as AgilityDigitalChannelList;
@@ -221,7 +246,7 @@ namespace Agility.Web
             }
 
 
-            if (AgilityContext.CurrentMode == Enum.Mode.Staging)
+            if (AgilityContext.CurrentMode == Agility.Web.Enum.Mode.Staging)
             {
                 //put this in cache for 30 seconds in staging mode...
                 AgilityCache.Set(cacheKey, channels, TimeSpan.FromSeconds(30));
@@ -231,7 +256,29 @@ namespace Agility.Web
             return channels;
         }
 
-        internal static AgilityExperimentListing GetExperiments(string websiteName)
+        internal static NameIndex GetContentDefinitionIndex(string websiteName)
+        {
+
+            AgilityItemKey itemKey = new AgilityItemKey();
+            itemKey.Key = ITEMKEY_CONTENTDEFINDEX;
+            itemKey.ItemType = typeof(NameIndex).Name;
+
+            NameIndex index = GetItem<NameIndex>(itemKey, websiteName);
+            return index;
+        }
+		
+        internal static NameIndex GetSharedContentIndex(string websiteName)
+        {
+
+            AgilityItemKey itemKey = new AgilityItemKey();
+            itemKey.Key = ITEMKEY_SHAREDCONTENTINDEX;
+            itemKey.ItemType = typeof(NameIndex).Name;
+
+            NameIndex index = GetItem<NameIndex>(itemKey, websiteName);
+            return index;
+        }
+
+		internal static AgilityExperimentListing GetExperiments(string websiteName)
 		{
 
 			AgilityItemKey itemKey = new AgilityItemKey();
@@ -411,7 +458,7 @@ namespace Agility.Web
 
 
             //if we are in staging mode, don't filter
-            if (AgilityContext.CurrentMode == Enum.Mode.Staging)
+            if (AgilityContext.CurrentMode == Agility.Web.Enum.Mode.Staging)
             {
                 if (AgilityContext.HttpContext != null) AgilityContext.HttpContext.Items[origCacheKey] = content;
                 return content;
@@ -592,7 +639,7 @@ namespace Agility.Web
 
             string cacheKey = string.Format("{0}.TempCache", GetCacheKey(itemKey));
 
-            if (AgilityContext.CurrentMode == Enum.Mode.Staging)
+            if (AgilityContext.CurrentMode == Agility.Web.Enum.Mode.Staging)
             {
                 //try to get the item from cache first
                 list = AgilityCache.Get(cacheKey) as AgilityUrlRedirectionList;
@@ -604,7 +651,7 @@ namespace Agility.Web
 
             if (list == null)
             {
-                if (AgilityContext.CurrentMode == Enum.Mode.Staging)
+                if (AgilityContext.CurrentMode == Agility.Web.Enum.Mode.Staging)
                 {
                     //in staging mode, throw an error if there is a request for content that doesn't exist..
                     throw new ApplicationException("The URL Redirections could not be loaded.");
@@ -616,7 +663,7 @@ namespace Agility.Web
             if (list.Redirections == null) list.Redirections = new AgilityUrlRedirection[0];
 
             //if we are in staging mode, cache this list for 15 seconds (so multiple resource requests don't require a lookup)
-            if (AgilityContext.CurrentMode == Enum.Mode.Staging)
+            if (AgilityContext.CurrentMode == Agility.Web.Enum.Mode.Staging)
             {
 				AgilityCache.Set(cacheKey, list, TimeSpan.FromMinutes(1), null, CacheItemPriority.NeverRemove);
             }
@@ -888,7 +935,7 @@ namespace Agility.Web
 
 
                 //filter the page on it's release date (in the sitemap, only in Live mode)
-                if (AgilityContext.CurrentMode == Enum.Mode.Live)
+                if (AgilityContext.CurrentMode == Agility.Web.Enum.Mode.Live)
                 {
 
                     if (! string.IsNullOrEmpty(page.TemplatePath) || page.XTemplateID > 0)
@@ -983,7 +1030,7 @@ namespace Agility.Web
 					
                     //build the file path and update the file...
                     string filepath = Path.Combine(
-							Current.Settings.ContentCacheFilePath,
+							Current.Settings.TransientCacheFilePath,
 							AgilityContext.WebsiteName,
 							AgilityContext.CurrentMode == Enum.Mode.Live ? "Live" : "Staging",
 							$"{DYNAMICPAGEINDEX_FILENAME}.bin"
@@ -991,7 +1038,7 @@ namespace Agility.Web
 
                     //write to a temp file first...
                     string tempfilepath = Path.Combine(
-							Current.Settings.ContentCacheFilePath,
+							Current.Settings.TransientCacheFilePath,
 							AgilityContext.WebsiteName,
 							"Temp",
 							Guid.NewGuid().ToString().Substring(0, 6)
@@ -1026,7 +1073,7 @@ namespace Agility.Web
                             //write the file to temp...
                             WriteFile(dpIndex, tempfilepath);
 
-                            WebTrace.WriteVerboseLine(string.Format("Update Dyn Page Index: Temp file {0}, live file {1}", tempfilepath, filepath));
+                            Agility.Web.Tracing.WebTrace.WriteVerboseLine(string.Format("Update Dyn Page Index: Temp file {0}, live file {1}", tempfilepath, filepath));
 
                             if (currentTry < numCopyTries)
                             {
@@ -1053,8 +1100,10 @@ namespace Agility.Web
                             {
                                 throw ex;
                             }
-
-                            WebTrace.WriteWarningLine(string.Format("Error moving file {0} to {1}, retrying. {2}", tempfilepath, filepath, ex));
+                            else
+                            {
+                                Agility.Web.Tracing.WebTrace.WriteWarningLine(string.Format("Error moving file {0} to {1}, retrying. {2}", tempfilepath, filepath, ex));
+                            }
 
                         }
 
@@ -1103,7 +1152,7 @@ namespace Agility.Web
             }
 
             string filepath = string.Format("{0}/{1}/{2}/{3}.bin",
-                Current.Settings.ContentCacheFilePath,
+                Current.Settings.TransientCacheFilePath,
                 AgilityContext.WebsiteName,
                 AgilityContext.CurrentMode == Enum.Mode.Live ? "Live" : "Staging",
                 DYNAMICPAGEINDEX_FILENAME
@@ -1112,7 +1161,7 @@ namespace Agility.Web
             if (AgilityContext.ContentAccessor != null)
             {
                 filepath = string.Format("{0}/{1}/{2}.bin",
-                    Current.Settings.ContentCacheFilePath,
+                    Current.Settings.TransientCacheFilePath,
                     AgilityContext.CurrentMode == Enum.Mode.Live ? "Live" : "Staging",
                     DYNAMICPAGEINDEX_FILENAME
                     );
@@ -1183,7 +1232,7 @@ namespace Agility.Web
 				{
 					//build the file path and update the file...
 					string filepath = Path.Combine(
-							Current.Settings.ContentCacheFilePath,
+							Current.Settings.TransientCacheFilePath,
 							AgilityContext.WebsiteName,
 							AgilityContext.CurrentMode == Enum.Mode.Live ? "Live" : "Staging",
 							$"{DYNAMICPAGEFORMULAINDEX_FILENAME}_{page.ID}_{contentReferenceName}_{page.LanguageCode}.bin"
@@ -1403,14 +1452,14 @@ namespace Agility.Web
 
                 //build the file path and update the file...
                 string filepath = Path.Combine(
-						Current.Settings.ContentCacheFilePath,
+						Current.Settings.TransientCacheFilePath,
 						AgilityContext.WebsiteName,
 						AgilityContext.CurrentMode == Enum.Mode.Live ? "Live" : "Staging",
 						$"{DYNAMICPAGEFORMULAINDEX_FILENAME}_{page.ID}_{contentReferenceName}_{page.LanguageCode}.bin"
 					);
 
                 string tempfilepath = Path.Combine(
-						Current.Settings.ContentCacheFilePath,
+						Current.Settings.TransientCacheFilePath,
 						AgilityContext.WebsiteName,
 						"Temp",
 						$"{DYNAMICPAGEFORMULAINDEX_FILENAME}_{page.ID}_{Guid.NewGuid().ToString().Substring(0, 8)}_{page.LanguageCode}.bin"
@@ -1447,7 +1496,7 @@ namespace Agility.Web
                 {
                     Directory.CreateDirectory(tempDir);
                 }
-                WebTrace.WriteVerboseLine(string.Format("UpdateDynamicPageFormulaIndex: Temp file {0}, live file {1}", tempfilepath, filepath));
+                Agility.Web.Tracing.WebTrace.WriteVerboseLine(string.Format("UpdateDynamicPageFormulaIndex: Temp file {0}, live file {1}", tempfilepath, filepath));
                 WriteFile(dpIndex, tempfilepath);
 
                 try
@@ -1513,20 +1562,46 @@ namespace Agility.Web
 
             //build the file path and update the file...
             string filepath = Path.Combine(
-					Current.Settings.ContentCacheFilePath,
+					Current.Settings.TransientCacheFilePath,
 					AgilityContext.WebsiteName,
 					AgilityContext.CurrentMode == Enum.Mode.Live ? "Live" : "Staging",
 					$"{DYNAMICPAGEFORMULAINDEX_FILENAME}_{page.ID}_{referenceName}_{page.LanguageCode}.bin"
 				);
 
             string tempfilepath = Path.Combine(
-					Current.Settings.ContentCacheFilePath,
+					Current.Settings.TransientCacheFilePath,
 					AgilityContext.WebsiteName,
 					"Temp",
 					$"{DYNAMICPAGEFORMULAINDEX_FILENAME}_{page.ID}_{referenceName}_{page.LanguageCode}.bin"
 				);
 
+
+			//TO BE REMOVED
+            //if (AgilityContext.ContentAccessor != null)
+            //{
+            //    filepath = string.Format("{0}/{1}/{2}_{3}_{4}_{5}.bin",
+            //    Current.Settings.ContentCacheFilePath,
+            //    AgilityContext.CurrentMode == Enum.Mode.Live ? "Live" : "Staging",
+            //    DYNAMICPAGEFORMULAINDEX_FILENAME,
+            //    page.ID,
+            //    referenceName,
+            //    page.LanguageCode
+            //    );
+
+            //    tempfilepath = string.Format("{0}/{1}/{2}_{3}_{4}_{5}.bin",
+            //    Current.Settings.ContentCacheFilePath,
+            //    "Temp",
+            //    DYNAMICPAGEFORMULAINDEX_FILENAME,
+            //    page.ID,
+            //    Guid.NewGuid().ToString().Substring(0, 8),
+            //    page.LanguageCode
+            //    );
+            //}
+
+
             CacheDependency dep = null;
+
+			
 
 			//wait for any writes to happen...
 			ReaderWriterLockSlim _dynamicPageFormulaIndexLock = GetDynamicPageFormulaLock(page.ID);
@@ -1619,7 +1694,7 @@ namespace Agility.Web
                         }
                         catch (Exception ex)
                         {
-                            WebTrace.WriteWarningLine(ex.ToString());
+                            Agility.Web.Tracing.WebTrace.WriteWarningLine(ex.ToString());
                         }
 
 
@@ -1697,7 +1772,7 @@ namespace Agility.Web
                             Directory.CreateDirectory(tempDir);
                         }
 
-                        WebTrace.WriteVerboseLine(string.Format("GetDynamicPageFormulaIndex: Temp file {0}, live file {1}", tempfilepath, filepath));
+                        Agility.Web.Tracing.WebTrace.WriteVerboseLine(string.Format("GetDynamicPageFormulaIndex: Temp file {0}, live file {1}", tempfilepath, filepath));
                         WriteFile(dpIndex, tempfilepath);
 
                         try
@@ -1707,7 +1782,7 @@ namespace Agility.Web
                         }
                         catch (Exception ex)
                         {
-                            WebTrace.WriteException(ex, string.Format("Error swapping file {0} with {1}", filepath, tempfilepath));
+                            Agility.Web.Tracing.WebTrace.WriteException(ex, string.Format("Error swapping file {0} with {1}", filepath, tempfilepath));
                             File.Copy(tempfilepath, filepath, true);
                             File.Delete(tempfilepath);
                         }
@@ -1857,10 +1932,10 @@ namespace Agility.Web
             itemKey.LanguageCode = languageCode;
             itemKey.ItemType = typeof(AgilityDocument).Name;
 
-            string fullFilePath = GetFilePathForItem(itemKey, websiteName);
+            string fullFilePath = GetFilePathForItemKey(itemKey, websiteName, transientPath: true);
 
 
-            if (AgilityContext.CurrentMode == Enum.Mode.Live)
+            if (AgilityContext.CurrentMode == Agility.Web.Enum.Mode.Live)
             {
                 //live mode				
 
@@ -1912,7 +1987,7 @@ namespace Agility.Web
             itemKey.Key = guid + filename;
 
             //resolve the attachment filename
-            string attachmentFilePath = BaseCache.GetFilePathForItem(itemKey, websiteName);
+            string attachmentFilePath = BaseCache.GetFilePathForItemKey(itemKey, websiteName, transientPath: true);
 
             //get the DIRECTORY that the attachment is in...
             string directory = Path.GetDirectoryName(attachmentFilePath);
@@ -1930,7 +2005,7 @@ namespace Agility.Web
             }
 
 			//if we get this far, and are in staging mode, download the attachment
-			if (AgilityContext.CurrentMode == Enum.Mode.Staging)
+			if (AgilityContext.CurrentMode == Agility.Web.Enum.Mode.Staging)
 			{
 				AgilityWebsiteAuthorization auth = GetAgilityWebsiteAuthorization();
 
@@ -2146,7 +2221,7 @@ namespace Agility.Web
             }
 
 
-            if (AgilityContext.CurrentMode == Enum.Mode.Live)
+            if (AgilityContext.CurrentMode == Agility.Web.Enum.Mode.Live)
             {
                 //remove any published items that have been "pulled"
 
@@ -2252,6 +2327,27 @@ namespace Agility.Web
                 dsExisting.Tables["ContentItems"].DefaultView.Sort = "itemOrder";
             }
 
+            //add in the tags	
+//TODO: figure out the tags			
+            //if (dsExisting.Tags != null)
+            //{
+            //    if (dsDelta.Tags != null)
+            //    {
+            //        if (debugSync) WebTrace.WriteWarningLine(string.Format("MergeContent: Merging tags: refname:{0}", deltaContent.ReferenceName));
+
+            //        dsExisting.Tags.Clear();
+            //        dsExisting.Tags.Merge(dsDelta.Tags);
+            //    }
+            //}
+            //else
+            //{
+            //    if (dsDelta.Tags != null)
+            //    {
+            //        if (debugSync) WebTrace.WriteWarningLine(string.Format("MergeContent: Copying tags: refname:{0}", deltaContent.ReferenceName));
+            //        dsExisting.Tables.Add(dsDelta.Tags.Copy());
+            //    }
+            //}
+
             if (debugSync) WebTrace.WriteWarningLine(string.Format("MergeContent: Accept changes: refname:{0}", deltaContent.ReferenceName));
             dsExisting.AcceptChanges();
 
@@ -2282,7 +2378,7 @@ namespace Agility.Web
 		
         public static AgilityItem MergeDeltaItems(AgilityItem existingItem, AgilityItem deltaItem, string websiteName)
         {
-            string filepath = GetFilePathForItem(deltaItem, websiteName);
+            string filepath = GetFilePathForItem(deltaItem, websiteName, transientPath: false);
 
             if (existingItem is AgilityContent || deltaItem is AgilityContent)
             {
@@ -2424,47 +2520,48 @@ namespace Agility.Web
                 {
                     return deltaItem;
                 }
-
-
             }
-
-
-
-
         }
 
         internal static string GetTempFilePathForItem(AgilityItemKey itemKey, string websiteName)
         {
-            return GetFilePathForItem(itemKey, websiteName, true);
+            return GetFilePathForItemKey(itemKey, websiteName, tempPath: true, transientPath: false);
         }
 
         internal static string GetTempFilePathForItem(AgilityItem item, string websiteName)
         {
             AgilityItemKey itemKey = GetItemKeyFromAgilityItem(item);
 
-            return GetFilePathForItem(itemKey, websiteName, true);
+            return GetFilePathForItemKey(itemKey, websiteName, tempPath: true, transientPath: false);
         }
 
-        internal static string GetFilePathForItem(AgilityItem item, string websiteName)
+        internal static string GetFilePathForItem(AgilityItem item, string websiteName, bool transientPath = false)
         {
             AgilityItemKey itemKey = GetItemKeyFromAgilityItem(item);
 
-            return GetFilePathForItem(itemKey, websiteName);
-
+            return GetFilePathForItemKey(itemKey, websiteName, transientPath: transientPath);
 
         }
 
-        internal static string GetFilePathForItem(AgilityItemKey itemKey, string websiteName)
-        {
-            return GetFilePathForItem(itemKey, websiteName, false);
-        }
-
-        private static string GetFilePathForItem(AgilityItemKey itemKey, string websiteName, bool tempPath)
+        internal static string GetFilePathForItemKey(AgilityItemKey itemKey, string websiteName, bool tempPath = false, bool transientPath = false)
         {
 
-            StringBuilder sb = new StringBuilder(Current.Settings.ContentCacheFilePath);
+            string cacheRoot = null;
 
-			if (!Current.Settings.ContentCacheFilePath.EndsWith(Path.DirectorySeparatorChar) && !Current.Settings.ContentCacheFilePath.EndsWith("/"))
+            if (transientPath)
+            {
+                //build the path to the transient cache...
+                cacheRoot = Current.Settings.TransientCacheFilePath;
+            }
+            else
+            {
+                //build the path to the persistent cache
+                cacheRoot = Current.Settings.ContentCacheFilePath;
+            }
+
+            StringBuilder sb = new StringBuilder(cacheRoot);
+
+            if (!cacheRoot.EndsWith(Path.DirectorySeparatorChar) && !cacheRoot.EndsWith("/"))
 			{
 				sb.Append(Path.DirectorySeparatorChar);
 			}
@@ -2486,7 +2583,7 @@ namespace Agility.Web
             }
             else
             {
-                if (AgilityContext.CurrentMode == Enum.Mode.Live)
+                if (AgilityContext.CurrentMode == Agility.Web.Enum.Mode.Live)
                 {
                     sb.Append("Live");
                 }
@@ -2561,7 +2658,7 @@ namespace Agility.Web
 
             string cacheKey = GetCacheKey(itemKey);
 
-            if (AgilityContext.CurrentMode == Enum.Mode.Live)
+            if (AgilityContext.CurrentMode == Agility.Web.Enum.Mode.Live)
             {
                 #region *** LIVE ***
 
@@ -2575,7 +2672,7 @@ namespace Agility.Web
                 if (o == null)
                 {
                     //get the filepath
-                    string filepath = GetFilePathForItem(itemKey, websiteName);
+                    string filepath = GetFilePathForItemKey(itemKey, websiteName, transientPath: true);
 
 
                     if (AgilityContext.ContentAccessor != null)
@@ -2651,10 +2748,10 @@ namespace Agility.Web
                 {
 
 					//access the content server
-					AgilityContentServerClient client = GetAgilityServerClient();
+					AgilityContentServerClient client = BaseCache.GetAgilityServerClient();
                     
 
-                    string filepath = GetFilePathForItem(itemKey, websiteName);
+                    string filepath = GetFilePathForItemKey(itemKey, websiteName, transientPath: true);
                     DateTime lastWriteTime = File.GetLastWriteTime(filepath);
 
                        
@@ -2722,19 +2819,22 @@ namespace Agility.Web
 
                     }
 
-                    AgilityItemKey[] itemKeys = { itemKey };
+                    AgilityItemKey[] itemKeys = new AgilityItemKey[] { itemKey };
 
                     AgilityItem[] items = new AgilityItem[0];
 
                     //check if the item is up to date...						
 
 
-                    //if (existingItem == null || AgilityContext.RefreshStagingModeObject(lastWriteTime) || forceGetFromServer)
+                    //HACK if (existingItem == null || AgilityContext.RefreshStagingModeObject(lastWriteTime) || forceGetFromServer)
                     if (existingItem == null || Indexes.IsStagingItemOutOfDate(existingItem))
                     {
                         //only go to the server if we have 
                         WebTrace.WriteVerboseLine("GetAgilityItemsForStaging: " + itemKey.ItemType + " - " + itemKey.Key);
                         items = client.GetAgilityItemsForStagingAsync(auth, itemKeys).Result.GetAgilityItemsForStagingResult;
+
+                        bool hackTest = Indexes.IsStagingItemOutOfDate(existingItem);
+
                     }
                     else
                     {
@@ -2772,17 +2872,17 @@ namespace Agility.Web
                             {
                                 //write the content to the file system
                                // ((AgilityContent)item).DataSet.RemotingFormat = SerializationFormat.Binary;
-                                WriteFile(o, GetFilePathForItem((TAgilityItem)o, websiteName), DateTime.MinValue);
+                                WriteFile(o, GetFilePathForItem((TAgilityItem)o, websiteName, transientPath: true), DateTime.MinValue);
                             }
                             else if (o is AgilitySitemap && existingItem == null)
                             {
                                 //write the sitemap to the file system (if it is new)									
-                                WriteFile(o, GetFilePathForItem((TAgilityItem)o, websiteName), DateTime.MinValue);
+                                WriteFile(o, GetFilePathForItem((TAgilityItem)o, websiteName, transientPath: true), DateTime.MinValue);
                             }
                             else if (o is AgilityDomainConfiguration && existingItem == null)
                             {
                                 //write the sitemap to the file system (if it is new)									
-                                WriteFile(o, GetFilePathForItem((TAgilityItem)o, websiteName), DateTime.MinValue);
+                                WriteFile(o, GetFilePathForItem((TAgilityItem)o, websiteName, transientPath: true), DateTime.MinValue);
                             }
                             else if (o is AgilityTagList && item != null)
                             {
@@ -2794,13 +2894,13 @@ namespace Agility.Web
                                     {
                                        // tagList.DSTags.RemotingFormat = SerializationFormat.Binary;
                                     }
-                                    WriteFile(o, GetFilePathForItem((TAgilityItem)o, websiteName), DateTime.MinValue);
+                                    WriteFile(o, GetFilePathForItem((TAgilityItem)o, websiteName, transientPath: true), DateTime.MinValue);
                                 }
                             }
                             else if (item.ID > 0)
                             {
                                 //only write to the file system if the item we got back from the server is a valid item
-                                WriteFile(o, GetFilePathForItem((TAgilityItem)o, websiteName), DateTime.MinValue);
+                                WriteFile(o, GetFilePathForItem((TAgilityItem)o, websiteName, transientPath: true), DateTime.MinValue);
                             }
 
 
@@ -2899,7 +2999,7 @@ namespace Agility.Web
                     string moduleCacheKey = GetCacheKey(moduleKey);
                     if (AgilityContext.HttpContext.Items[moduleCacheKey] == null)
                     {
-                        string moduleFilePath = GetFilePathForItem(moduleKey, websiteName);
+                        string moduleFilePath = GetFilePathForItemKey(moduleKey, websiteName, transientPath: true);
                         AgilityModule existingModule = ReadFile< AgilityModule>(moduleFilePath);
                         if (existingModule != null)
                         {
@@ -2931,7 +3031,7 @@ namespace Agility.Web
                     string preloadedItemCacheKey = GetCacheKey(preloadedItemKey);
                     if (AgilityContext.HttpContext.Items[preloadedItemCacheKey] == null)
                     {
-                        string preloadedItemFilepath = GetFilePathForItem(preloadedItemKey, websiteName);
+                        string preloadedItemFilepath = GetFilePathForItemKey(preloadedItemKey, websiteName, transientPath: true);
                         AgilityItem existingPreloadedItem = ReadFile<AgilityItem>(preloadedItemFilepath);
                         if (existingPreloadedItem != null)
                         {
@@ -2962,7 +3062,7 @@ namespace Agility.Web
                 //if there are more than 40 items in the list, only get the first 40 and write a warning to the log
                 if (lstSecondaryKeys.Count > 40)
                 {
-                    WebTrace.WriteWarningLine(string.Format("There are {0} items being loaded on page {1}.  This could be causing performance problems in staging/development mode.", lstSecondaryKeys.Count, AgilityContext.HttpContext.Request.GetDisplayUrl()));
+                    Agility.Web.Tracing.WebTrace.WriteWarningLine(string.Format("There are {0} items being loaded on page {1}.  This could be causing performance problems in staging/development mode.", lstSecondaryKeys.Count, AgilityContext.HttpContext.Request.GetDisplayUrl()));
                     lstSecondaryKeys = lstSecondaryKeys.GetRange(0, 39);
                 }
 
@@ -2988,7 +3088,7 @@ namespace Agility.Web
 
                 AgilityItem itemFromServer = secondaryItemsFromServer[i];
 
-                string filepath = GetFilePathForItem(itemFromServer, websiteName);
+                string filepath = GetFilePathForItem(itemFromServer, websiteName, transientPath: true);
                 string cacheKey = GetCacheKey(itemFromServer);
 
                 AgilityItem existingItem = null;
@@ -3082,7 +3182,7 @@ namespace Agility.Web
                 if (existingContent == null)
                 {
 
-                    string contentFilePath = GetFilePathForItem(contentKey, websiteName);
+                    string contentFilePath = GetFilePathForItemKey(contentKey, websiteName, transientPath: true);
                     existingContent = ReadFile< AgilityContent>(contentFilePath);
                     if (existingContent != null)
                     {
@@ -3163,7 +3263,7 @@ namespace Agility.Web
             else if (item is AgilitySitemap)
             {
 
-                string[] depKeys = { CACHEKEY_CONFIG };
+                string[] depKeys = new string[] { CACHEKEY_CONFIG };
 
                 //sitemap is dependant on the config and its file
                 if (AgilityContext.ContentAccessor != null)
@@ -3172,7 +3272,7 @@ namespace Agility.Web
                 }
                 else
                 {
-                    dep = new CacheDependency(new [] { filepath }, depKeys);
+                    dep = new CacheDependency(new string[] { filepath }, depKeys);
                 }
             }
             else if (!string.IsNullOrEmpty(item.LanguageCode))
@@ -3191,7 +3291,7 @@ namespace Agility.Web
                 }
                 else
                 {
-                    dep = new CacheDependency(new [] { filepath }, depKeys);
+                    dep = new CacheDependency(new string[] { filepath }, depKeys);
                 }
 
                 if(BaseCache.CACHEKEY_CONFIG == cacheKey)
@@ -3275,19 +3375,17 @@ namespace Agility.Web
             {
                 return CACHEKEY_CHANNELS;
             }
-            
-            if (itemKey.ItemType == typeof(AgilityDomainConfiguration).Name)
+            else if (itemKey.ItemType == typeof(AgilityDomainConfiguration).Name)
             {
                 return CACHEKEY_CONFIG;
             }
-            
-            if (itemKey.ItemType == typeof(AgilitySitemap).Name)
+            else if (itemKey.ItemType == typeof(AgilitySitemap).Name)
             {
                 //sitemap uses the word Sitemap and the language code
                 return GetCacheKey_Sitemap(itemKey.LanguageCode);
+
             }
-            
-            if (itemKey.ItemType == typeof(AgilityPage).Name)
+            else if (itemKey.ItemType == typeof(AgilityContentServer.AgilityPage).Name)
             {
 				//pageitem uses the ID (stored in sitemap as picID) and the language
 				int id = -1;
@@ -3296,79 +3394,80 @@ namespace Agility.Web
 				return GetCacheKey_Page(id, itemKey.LanguageCode);
 
             }
-            
-            if (itemKey.ItemType == typeof(AgilityContent).Name)
+            else if (itemKey.ItemType == typeof(AgilityContent).Name)
             {
                 //content uses the reference name and the language code
                 return GetCacheKey_Content((string)itemKey.Key, itemKey.LanguageCode);
             }
-            
-            if (itemKey.ItemType == typeof(AgilityModule).Name)
+            else if (itemKey.ItemType == typeof(AgilityModule).Name)
             {
 				//module uses module_ID
 				int id = -1;
 				if (!int.TryParse($"{itemKey.Key}", out id)) id = -1;
 				return GetCacheKey_Module(id);
             }
-            
-            if (itemKey.ItemType == typeof(AgilityPageDefinition).Name)
+            else if (itemKey.ItemType == typeof(AgilityPageDefinition).Name)
             {
 				//page def uses pageDefinition_ID
 				int id = -1;
 				if (!int.TryParse($"{itemKey.Key}", out id)) id = -1;
 				return GetCacheKey_PageDefinition(id);
             }
-            
-            if (itemKey.ItemType == typeof(AgilityTagList).Name)
+            else if (itemKey.ItemType == typeof(AgilityTagList).Name)
             {
                 //content uses the reference name and the language code
                 return GetCacheKey_TagList(itemKey.LanguageCode);
             }
-            
-            if (itemKey.ItemType == typeof(AgilityDocument).Name)
+            else if (itemKey.ItemType == typeof(AgilityDocument).Name)
             {
                 if (itemKey.Key == null) return null;
-                return $"AgilityDocument_{itemKey.Key.ToString().Replace("\\", "/").Replace("/", "~~~")}";
+                return string.Format("AgilityDocument_{0}", itemKey.Key.ToString().Replace("\\", "/").Replace("/", "~~~"));
             }
-            
-            if (itemKey.ItemType == typeof(AgilityAssetMediaGroup).Name)
+            else if (itemKey.ItemType == typeof(AgilityAssetMediaGroup).Name)
             {
                 if (itemKey.Key == null) return null;
-                return $"AgilityMediaGroup_{itemKey.Key}";
+                return string.Format("AgilityMediaGroup_{0}", itemKey.Key.ToString());
             }
-            
-            return $"{CACHEKEY_PREFIX}{itemKey.Key}".ToLowerInvariant();
+            else
+            {
+                return string.Format("{0}{1}", CACHEKEY_PREFIX, itemKey.Key).ToLowerInvariant();
+            }
+
+            throw new NotSupportedException(string.Format("The type {0} does not support caching.", itemKey.ItemType));
         }
 
         private static string GetCacheKey_Sitemap(string languageCode)
         {
-            return CACHEKEY_PREFIX + ITEMKEY_SITEMAP + $"_{languageCode}".ToLowerInvariant();
+            return CACHEKEY_PREFIX + ITEMKEY_SITEMAP + string.Format("_{0}", languageCode).ToLowerInvariant();
         }
 
         private static string GetCacheKey_Page(int pagecontentID, string languageCode)
         {
-            return CACHEKEY_PREFIX + $"page_{pagecontentID}_{languageCode}".ToLowerInvariant();
+            return CACHEKEY_PREFIX + string.Format("page_{0}_{1}", pagecontentID, languageCode).ToLowerInvariant();
         }
 
         private static string GetCacheKey_Content(string referenceName, string languageCode)
         {
-            return CACHEKEY_PREFIX + $"content_{referenceName}_{languageCode}".ToLowerInvariant();
+            return CACHEKEY_PREFIX + string.Format("content_{0}_{1}", referenceName, languageCode).ToLowerInvariant();
         }
 
         private static string GetCacheKey_TagList(string languageCode)
         {
-            return $"{CACHEKEY_PREFIX}{ITEMKEY_TAGLIST}_{languageCode}".ToLowerInvariant();
+            return string.Format("{0}{1}_{2}", CACHEKEY_PREFIX, BaseCache.ITEMKEY_TAGLIST, languageCode).ToLowerInvariant();
         }
 
         private static string GetCacheKey_Module(int id)
         {
-            return CACHEKEY_PREFIX + $"module_{id}";
+            return CACHEKEY_PREFIX + string.Format("module_{0}", id);
         }
 
         private static string GetCacheKey_PageDefinition(int id)
         {
-            return CACHEKEY_PREFIX + $"pagedefinition_{id}";
+            return CACHEKEY_PREFIX + string.Format("pagedefinition_{0}", id);
         }
+
+
+
 
         /// <summary>
         /// Gets an AgilityItemKey from an AgilityItem based on the various item types that we have.
@@ -3390,7 +3489,7 @@ namespace Agility.Web
             {
                 itemKey.Key = ((AgilityContent)item).ReferenceName;
             }
-            else if (item is AgilityPage)
+            else if (item is AgilityContentServer.AgilityPage)
             {
                 itemKey.Key = item.ID;
             }
@@ -3445,7 +3544,7 @@ namespace Agility.Web
             if (!sb.ToString().EndsWith(Path.DirectorySeparatorChar.ToString())) sb.Append(Path.DirectorySeparatorChar);
 
 
-            if (AgilityContext.CurrentMode == Enum.Mode.Live)
+            if (AgilityContext.CurrentMode == Agility.Web.Enum.Mode.Live)
             {
                 sb.Append("Live");
             }
@@ -3625,12 +3724,26 @@ namespace Agility.Web
                         {
                             if (item != null)
                             {
-                                string json = JsonConvert.SerializeObject(item);
+
+								var serializer = new JsonSerializer();
+
+								string json = JsonConvert.SerializeObject(item);
 								
+
 								//serialize the "rest" using binary
 								StreamWriter sw = new StreamWriter(fs);
 								sw.Write(json);
 								sw.Flush();
+
+								//JsonWriter jw = new JsonTextWriter(sw);
+								
+								//	serializer.Serialize(jw, item);
+								
+
+								
+								//BinaryFormatter bf = new BinaryFormatter();
+        //                        bf.Serialize(fs, item);
+                                
                             }
                         }
 
@@ -3645,7 +3758,7 @@ namespace Agility.Web
 
                         if (retryCount < totalRetries - 1)
                         {
-                            WebTrace.WriteInfoLine(string.Format("File write error for file {0}, retrying. {1}", filepath, ioex));
+                            Agility.Web.Tracing.WebTrace.WriteInfoLine(string.Format("File write error for file {0}, retrying. {1}", filepath, ioex));
                         }
 
                         Thread.Sleep(2000); //wait a couple seconds before retrying...
@@ -3686,7 +3799,7 @@ namespace Agility.Web
         }
 
 
-        internal static void DoFileOperation(string filepath, Utils.FileUtils.FileOperationDelegate fileOperationDelegate)
+        internal static void DoFileOperation(string filepath, Agility.Web.Utils.FileUtils.FileOperationDelegate fileOperationDelegate)
         {
             filepath = filepath.Replace("//", "/");
 
@@ -3717,7 +3830,7 @@ namespace Agility.Web
         }
 
 
-        internal static void DoFileReadOperation(string filepath, Utils.FileUtils.FileOperationDelegate fileOperationDelegate)
+        internal static void DoFileReadOperation(string filepath, Agility.Web.Utils.FileUtils.FileOperationDelegate fileOperationDelegate)
         {
             filepath = filepath.Replace("//", "/");
 
@@ -3900,13 +4013,31 @@ namespace Agility.Web
 				{
 
 					fs = new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.Read);
+					
+					
 
-                    using (StreamReader sr = new StreamReader(fs))
+					using (StreamReader sr = new StreamReader(fs))
 					{
 						string json = sr.ReadToEnd();
 						o = JsonConvert.DeserializeObject<T>(json);
 					}
-                    fs = null;
+
+
+					//using (JsonReader reader = new JsonTextReader(sr))
+					//{
+					//	JsonSerializer serializer = new JsonSerializer();
+
+					//	// read the json from a stream
+					//	// json size doesn't matter because only a small piece is read at a time from the HTTP request
+					//	o = serializer.Deserialize(reader);						
+					//}
+
+
+					//BinaryFormatter bf = new BinaryFormatter();					
+					//o = bf.Deserialize(fs);
+					//fs.Flush();
+					//fs.Close();
+					fs = null;
 					
 				}
 
@@ -3991,6 +4122,25 @@ namespace Agility.Web
             WebTrace.WriteInfoLine("Cache Cleared: " + websiteName);
 
 
+            
+            if (! string.IsNullOrWhiteSpace(Current.Settings.TransientCacheFilePath)
+                && Current.Settings.ContentCacheFilePath != Current.Settings.TransientCacheFilePath)
+            {
+                
+                string dirPath = Path.Combine(Current.Settings.TransientCacheFilePath, websiteName, "Live");
+                WebTrace.WriteInfoLine("Deleting transient cache files: " + dirPath);
+
+                try
+                {
+                    Directory.Delete(dirPath, true);                    
+                }
+                catch (Exception ex)
+                {
+                    Tracing.WebTrace.WriteException(ex, "Error occurred while trying to delete transient cache files.");
+                }
+
+                WebTrace.WriteInfoLine("Transient Cache Cleared: " + websiteName);
+            }
 
 
         }

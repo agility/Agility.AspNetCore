@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+
 using Microsoft.Extensions.FileProviders;
 using System;
 using System.Collections.Concurrent;
@@ -51,12 +52,21 @@ namespace Agility.Web
 
                 Current.HostingEnvironment = env;
 
+                //create the main cache filepath folder (for sync'd files)
                 if (!System.IO.Directory.Exists(Current.Settings.RootedContentCacheFilePath))
                 {
                     System.IO.Directory.CreateDirectory(Current.Settings.RootedContentCacheFilePath);
                 }
 
-                CacheDependency.fileProvider = new PhysicalFileProvider(Current.Settings.RootedContentCacheFilePath);
+                
+                //create the transient filepath folder
+                if (!System.IO.Directory.Exists(Current.Settings.RootedTransientCacheFilePath))
+                {
+                    System.IO.Directory.CreateDirectory(Current.Settings.RootedTransientCacheFilePath);
+                }
+                
+
+                CacheDependency.fileProvider = new PhysicalFileProvider(Current.Settings.RootedTransientCacheFilePath);
             }
             catch (Exception ex)
             {
@@ -84,6 +94,8 @@ namespace Agility.Web
                 });
 
                 services.AddSingleton<IAuthorizationHandler, CorrectWebsiteAuthorizationHandler>();
+
+
             }
             catch (Exception ex)
             {
@@ -102,7 +114,7 @@ namespace Agility.Web
                     return null;
                 }
 
-                return m_httpContextAccessor.HttpContext;
+                return m_httpContextAccessor?.HttpContext;
             }
             set
             {
@@ -685,17 +697,17 @@ namespace Agility.Web
             {
 
                 //check context first
-                AgilityPage _page = HttpContext.Items["Agility.Web.AgilityContext.Page"] as AgilityPage;
+                AgilityPage _page = AgilityContext.HttpContext.Items["Agility.Web.AgilityContext.Page"] as AgilityPage;
                 if (_page == null)
                 {
                     //TODO: verify this path is correct to get the page from...
-                    string url = HttpContext.Request.Path;
+                    string url = AgilityContext.HttpContext.Request.Path;
 
                     url = HttpUtility.UrlPathEncode(url);
 
-                    _page = Data.GetPage(url);
+                    _page = Agility.Web.Data.GetPage(url);
 
-                    HttpContext.Items["Agility.Web.AgilityContext.Page"] = _page;
+                    AgilityContext.HttpContext.Items["Agility.Web.AgilityContext.Page"] = _page;
                 }
 
 
@@ -703,7 +715,7 @@ namespace Agility.Web
             }
             set
             {
-                HttpContext.Items["Agility.Web.AgilityContext.Page"] = value;
+                AgilityContext.HttpContext.Items["Agility.Web.AgilityContext.Page"] = value;
             }
         }
 
@@ -711,7 +723,7 @@ namespace Agility.Web
         /// <summary>
         /// Gets the Sitemap object for the current language.
         /// </summary>
-        public static Sitemap Sitemap
+        public static Web.Objects.Sitemap Sitemap
         {
             get
             {
@@ -946,11 +958,17 @@ namespace Agility.Web
 			*/
             if (string.Equals(AgilityContext.HttpContext.Request.Method, "post", StringComparison.CurrentCultureIgnoreCase))
             {
-                string eventArgument = AgilityContext.HttpContext.Request.Form["agilitypostback"];
-
-                if (!string.IsNullOrEmpty(eventArgument))
+                try
                 {
-                    if (AgilityHttpModule.HandleStatusPanelPostback(eventArgument)) return true;
+                    string eventArgument = AgilityContext.HttpContext.Request.Form["agilitypostback"];
+
+                    if (!string.IsNullOrEmpty(eventArgument))
+                    {
+                        if (AgilityHttpModule.HandleStatusPanelPostback(eventArgument)) return true;
+                    }
+                } catch (Exception ex)
+                {
+                    Agility.Web.Tracing.WebTrace.WriteException(ex, $"Could not read postback from {AgilityContext.HttpContext.Request.GetDisplayUrl()}.");
                 }
             }
 
@@ -1329,7 +1347,7 @@ namespace Agility.Web
             }
             set
             {
-                HttpContext.Items["Agility.Web.Context.IsResponseEnded"] = value;
+                AgilityContext.HttpContext.Items["Agility.Web.Context.IsResponseEnded"] = value;
 
             }
         }
@@ -1340,11 +1358,11 @@ namespace Agility.Web
             get
             {
                 //TODO: make sure this is used for the Output Cache / Response Cache dependancy
-                List<string> lst = HttpContext.Items["Agility.Web.Context.OutputCacheDependencies"] as List<string>;
+                List<string> lst = AgilityContext.HttpContext.Items["Agility.Web.Context.OutputCacheDependencies"] as List<string>;
                 if (lst == null)
                 {
                     lst = new List<string>();
-                    HttpContext.Items["Agility.Web.Context.OutputCacheDependencies"] = lst;
+                    AgilityContext.HttpContext.Items["Agility.Web.Context.OutputCacheDependencies"] = lst;
                 }
                 return lst;
             }

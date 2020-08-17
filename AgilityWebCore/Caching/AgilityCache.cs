@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading;
 
 namespace Agility.Web.Caching
@@ -27,6 +28,7 @@ namespace Agility.Web.Caching
             return MemoryCache.Get<T>(key);
         }
 
+        //TODO: implement caching layer...
         internal static object Get(string key)
         {
             return MemoryCache.Get(key);
@@ -35,6 +37,15 @@ namespace Agility.Web.Caching
 
         internal static void Set(string key, object o, TimeSpan timeout, CacheDependency cacheDependency = null, CacheItemPriority priority = CacheItemPriority.Normal)
         {
+
+            //get the cancellation token for this item and trigger it
+            CancellationTokenSource tokenSource = null;
+            // if (KeyTokens.TryGetValue(key, out tokenSource))
+            // {
+            //     tokenSource.Cancel();
+            // }
+
+
             //set the cache options
             MemoryCacheEntryOptions options = new MemoryCacheEntryOptions()
             {
@@ -62,6 +73,20 @@ namespace Agility.Web.Caching
 
             MemoryCache.Set<object>(key, o, options);
         }
+
+        // static void PostCacheEviction2(object key)
+        // {
+        //     string keyStr = key as string;
+        //     if (string.IsNullOrWhiteSpace(keyStr)) return;
+
+
+        //     //if this object is kicked out of cache, make sure all of it's dependants are un-cached also
+        //     CancellationTokenSource tokenSource = null;
+        //     if (KeyTokens.TryGetValue($"{key}", out tokenSource))
+        //     {
+        //         tokenSource.Cancel();
+        //     }
+        // }
 
         /// <summary>
         /// When an object is kicked out of Agility's memory cache.
@@ -98,7 +123,13 @@ namespace Agility.Web.Caching
             MemoryCache.Remove(key);
         }
 
-        internal static bool UseAgilityOutputCache => false;
+        internal static bool UseAgilityOutputCache
+        {
+            get
+            {
+                return false;
+            }
+        }
 
 
         internal static void AddResponseCacheDependancy(List<string> cacheKeys)
