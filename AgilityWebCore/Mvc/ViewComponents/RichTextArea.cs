@@ -6,13 +6,13 @@ namespace Agility.Web.Mvc.ViewComponents
 {
     public class RichTextArea : ViewComponent
     {
-		public HtmlString InvokeAsync(AgilityContentItem item)
+		public Task<HtmlString> InvokeAsync(AgilityContentItem item)
 		{
 			AgilityContext.HttpContext = HttpContext;
 
 			string value = item["TextBlob"] as string;
 			
-			return new HtmlString(value);
+			return Task.FromResult(new HtmlString(value));
 		}
 		
 	}

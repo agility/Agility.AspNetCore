@@ -9,7 +9,7 @@ namespace Agility.Web.Mvc.ViewComponents
 {
     public class AgilityBottomScripts : ViewComponent
     {
-		public HtmlString InvokeAsync()
+		public Task<HtmlString> InvokeAsync()
 		{
 			AgilityContext.HttpContext = HttpContext;
 
@@ -76,7 +76,7 @@ namespace Agility.Web.Mvc.ViewComponents
 			}
 
 
-			return new HtmlString(sb.ToString());
+			return Task.FromResult(new HtmlString(sb.ToString()));
 			
 		}
 
