@@ -84,7 +84,6 @@ namespace Agility.Web
                 services.Configure<MvcRazorRuntimeCompilationOptions>(opts => opts.FileProviders.Add(new AgilityDynamicCodeProvider()));
                 services.Configure<MvcRazorRuntimeCompilationOptions>(opts => opts.FileProviders.Add(new AgilityDynamicModuleProvider()));
 
-
                 var settings = configuration.GetSection("Agility").Get<Settings>();
 
                 services.AddAuthorization(options =>
@@ -95,6 +94,7 @@ namespace Agility.Web
                     });
                 });
 
+                services.AddHttpContextAccessor();
                 services.AddSingleton<IAuthorizationHandler, CorrectWebsiteAuthorizationHandler>();
 
 

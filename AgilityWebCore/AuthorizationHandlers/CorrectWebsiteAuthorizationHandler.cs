@@ -1,27 +1,31 @@
-﻿using Agility.Web.Configuration;
-using Agility.Web.Requirements;
+﻿using Agility.Web.Requirements;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.Options;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 
 namespace Agility.Web.AuthorizationHandlers
 {
     internal class CorrectWebsiteAuthorizationHandler : AuthorizationHandler<CorrectWebsiteRequirement>
     {
 
+        private readonly IHttpContextAccessor _httpContextAccessor;
+
+        public CorrectWebsiteAuthorizationHandler(IHttpContextAccessor httpContextAccessor)
+        {
+            _httpContextAccessor = httpContextAccessor;
+        }
+
         protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, CorrectWebsiteRequirement requirement)
         {
-            if(context == null)
+            if (context == null)
                 throw new ArgumentNullException(nameof(context));
 
             if(requirement == null)
                 throw new ArgumentNullException(nameof(requirement));
 
-            var authFilterCtx = (Microsoft.AspNetCore.Mvc.Filters.AuthorizationFilterContext)context.Resource;
-            var httpContext = authFilterCtx.HttpContext;
+            var httpContext = _httpContextAccessor.HttpContext;
+
 
             if (!httpContext.Request.Headers.ContainsKey("WebsiteName") ||
                 !httpContext.Request.Headers.ContainsKey("SecurityKey"))
