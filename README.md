@@ -9,16 +9,19 @@ Learn how to setup the Agility.AspNetCore package in your dotnet core applicatio
 
 
 ## How to build:
-- From the downloaded source code, `cd AgilityWebCore` and run the following command to build a Release version of the Agility.AspNetCore.dll
-     > `> dotnet publish -o ../builds`
+From the downloaded source code, `cd AgilityWebCore` and run the following command to build a Release version of the Agility.AspNetCore.dll
+
+`> dotnet publish -o ../builds`
 
 ## How to pack a Nuget Package
- - From the downloaded source code, `cd AgilityWebCore` and run the following command
-	> `> dotnet pack -o ../nupkgs`
+ From the downloaded source code, `cd AgilityWebCore` and run the following command
+
+`> dotnet pack -o ../nupkgs`
 
 ## How to publish as a Nuget Package
- -  - From the `AgilityWebCore` and run command the following command
-	> `> dotnet nuget push ../nupkgs/Agility.AspNetCore` --source https://api.nuget.org/v3/index.json --api-key xxxxxxxxxxxxxxxxxxxxxxxxxxx
+From the `AgilityWebCore` and run command the following command
+
+`> dotnet nuget push ../nupkgs/Agility.AspNetCore --source https://api.nuget.org/v3/index.json --api-key xxxxxxxxxxxxxxxxxxxxxxxxxxx`
 
 
 Follow the [ASP.NET Core](https://help.agilitycms.com/hc/en-us/sections/360002696372-ASP-NET-Core) section on our help site for latest help/guide articles.
