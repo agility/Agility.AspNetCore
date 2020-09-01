@@ -24,4 +24,3 @@ From the `AgilityWebCore` and run command the following command
 `> dotnet nuget push ../nupkgs/Agility.AspNetCore --source https://api.nuget.org/v3/index.json --api-key xxxxxxxxxxxxxxxxxxxxxxxxxxx`
 
 
-Follow the [ASP.NET Core](https://help.agilitycms.com/hc/en-us/sections/360002696372-ASP-NET-Core) section on our help site for latest help/guide articles.
