@@ -5,7 +5,9 @@ The package can be installing from NuGet
 ```
 PM> Install-Package Agility.AspNetCore
 ```
-Learn how to setup the Agility.AspNetCore package in your dotnet core application [here](https://help.agilitycms.com/hc/en-us/articles/360019026211-Agility-AspNetCore).
+
+## How to use in a Net Core site?
+Learn how to setup the Agility.AspNetCore package in your dotnet core site [here](https://help.agilitycms.com/hc/en-us/articles/360019026211-Agility-AspNetCore).
 
 
 ## How to build:
