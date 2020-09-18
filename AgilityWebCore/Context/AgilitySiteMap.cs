@@ -99,53 +99,40 @@ namespace Agility.Web
 
 
 				AgilityPage page = AgilityContext.Page;
-				AgilitySiteMapNode dynamicPageNode = null;
+				AgilitySiteMapNode parentNode = null;
 				if (page != null)
 				{
 					node = FindSiteMapNodeFromKey(page.ID.ToString());
 					if (node != null)
 					{
+						parentNode = node.ParentNode;
 
-
-						if (!string.IsNullOrWhiteSpace(node.AgilityPage.ServerPage.DynamicPageContentViewReferenceName)
-							|| !string.IsNullOrWhiteSpace(node.AgilityPage.ServerPage.DynamicPageParentFieldName))
+						//traverse up the tree until the first static page is found
+						//for most dynamic pages -- parentNode will be the exit point
+						while (parentNode != null)
 						{
-							//we are already on the dynamic page node...
-							dynamicPageNode = node;
-						}
-						else
-						{
-							//we have to traverse up the tree to find the parent node...
-							dynamicPageNode = node.ParentNode;
-
-							//traverse up the tree until the first static page is found
-							//for most dynamic pages -- parentNode will be the exit point
-							while (dynamicPageNode != null)
-							{
-								var aNode = dynamicPageNode as AgilitySiteMapNode;
-								if (aNode != null
-									&& aNode.AgilityPage != null
-									&& (
-										!string.IsNullOrEmpty(aNode.AgilityPage.ServerPage.DynamicPageContentViewReferenceName)
-										|| !string.IsNullOrEmpty(aNode.AgilityPage.ServerPage.DynamicPageParentFieldName)
-									)
+							var aNode = parentNode as AgilitySiteMapNode;
+							if (aNode != null
+								&& aNode.AgilityPage != null
+								&& (
+									!string.IsNullOrEmpty(aNode.AgilityPage.ServerPage.DynamicPageContentViewReferenceName)
+									|| !string.IsNullOrEmpty(aNode.AgilityPage.ServerPage.DynamicPageParentFieldName)
 								)
-								{
-									dynamicPageNode = aNode.ParentNode;
-								}
-								else
-								{
-									break;
-								}
-
+							)
+							{
+								parentNode = aNode.ParentNode;
+							}
+							else
+							{
+								break;
 							}
 
 						}
 
-
-						if (dynamicPageNode == null) dynamicPageNode = RootNode;
-
 					}
+
+
+					if (parentNode == null) parentNode = RootNode;
 
 					//check if this is a dynamic page... if so, we need to load up the child items for the parent...
 					if (AgilityContext.DynamicPageItemRow != null)
@@ -155,7 +142,7 @@ namespace Agility.Web
 						if (!int.TryParse($"{AgilityContext.DynamicPageItemRow["ContentID"]}", out contentID)) contentID = -1;
 
 						//do a search for this node, starting at the root...
-						node = FindDynamicNodeByContentID(dynamicPageNode, contentID);
+						node = FindDynamicNodeByContentID(parentNode, contentID);
 
 						//now, we may need to keep searching if the CURRENT node is actually a static page UNDERNEATH the dynamic node..
 						AgilitySiteMapNode anode = node as AgilitySiteMapNode;
@@ -490,16 +477,33 @@ namespace Agility.Web
 			if (node == null) return;
 			if (_tmpAddedNodes.ContainsKey(node.Key)) return;
 
-			_tmpAddedNodes.Add(node.Key, node.Key);
-
-
-			AgilitySiteMapNode anode = node as AgilitySiteMapNode;
 			AgilitySiteMapNode pnode = parentNode as AgilitySiteMapNode;
-			if (anode != null && pnode != null)
+			if (pnode != null)
 			{
-				anode.ParentNode = pnode;
-				pnode.ChildNodes.Add(anode);
+				node.ParentNode = pnode;
 
+				string dynamicPageContentReferenceName = node.DynamicPageContentReferenceName;
+				string dynamicPageParentFieldName = node.DynamicPageParentFieldName;
+
+				if (!string.IsNullOrEmpty(dynamicPageContentReferenceName)
+					|| !string.IsNullOrEmpty(dynamicPageParentFieldName))
+				{
+					//if this node is a dynamic page, expand it
+					List<AgilitySiteMapNode> col = new List<AgilitySiteMapNode>();
+					col = GetDynamicChildNodes(node, parentNode, col);
+
+					pnode.ChildNodes.AddRange(col);
+
+				}
+				else
+				{
+					//it's a regular one...
+					_tmpAddedNodes.Add(node.Key, node.Key);
+
+
+					pnode.ChildNodes.Add(node);
+
+				}
 			}
 
 
