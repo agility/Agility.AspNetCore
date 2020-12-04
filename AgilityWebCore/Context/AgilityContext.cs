@@ -1084,6 +1084,7 @@ namespace Agility.Web
                 string cacheKey = string.Format("{0}_{1}", CACHEKEY_URLREDIRECTIONS, AgilityContext.CurrentMode);
 
                 Dictionary<string, URLRedirection> _urlRedirections = AgilityCache.Get(CACHEKEY_URLREDIRECTIONS) as Dictionary<string, URLRedirection>;
+                
                 if (_urlRedirections == null)
                 {
                     string dependancyStr = null;
@@ -1135,12 +1136,11 @@ namespace Agility.Web
 
                     }
 
-
                     //add to cache if live...
                     if (AgilityContext.CurrentMode == Agility.Web.Enum.Mode.Live)
                     {
                         CacheDependency dep = new CacheDependency(new string[0], new string[] { dependancyStr });
-                        AgilityCache.Set(CACHEKEY_URLREDIRECTIONS, _urlRedirections, TimeSpan.FromDays(1), dep, AgilityContext.DefaultCachePriority);
+                        AgilityCache.Set(CACHEKEY_URLREDIRECTIONS, _urlRedirections, TimeSpan.FromMinutes(1), dep, AgilityContext.DefaultCachePriority);
 
                     }
                     else
@@ -1237,7 +1237,7 @@ namespace Agility.Web
                     CacheDependency dep = new CacheDependency(new string[0], new string[] { CACHEKEY_URLREDIRECTIONS });
                     AgilityCache.Remove(CACHEKEY_URLREDIRECTIONS_WITHQUERYSTRINGS);
 
-                    AgilityCache.Set(CACHEKEY_URLREDIRECTIONS_WITHQUERYSTRINGS, redirectsWithQuerys, TimeSpan.FromDays(1), dep, AgilityContext.DefaultCachePriority);
+                    AgilityCache.Set(CACHEKEY_URLREDIRECTIONS_WITHQUERYSTRINGS, redirectsWithQuerys, TimeSpan.FromMinutes(1), dep, AgilityContext.DefaultCachePriority);
 
                 }
 
@@ -1279,7 +1279,7 @@ namespace Agility.Web
                 else
                 {
                     CacheDependency dep = new CacheDependency(new string[0], new string[] { CACHEKEY_URLREDIRECTIONS });
-                    AgilityCache.Set(CACHEKEY_URLREDIRECTIONS_WITHOUTQUERYSTRINGS, redirectsWithoutQuerys, TimeSpan.FromDays(1), dep, AgilityContext.DefaultCachePriority);
+                    AgilityCache.Set(CACHEKEY_URLREDIRECTIONS_WITHOUTQUERYSTRINGS, redirectsWithoutQuerys, TimeSpan.FromMinutes(1), dep, AgilityContext.DefaultCachePriority);
 
                 }
 
@@ -1332,7 +1332,7 @@ namespace Agility.Web
                 else
                 {
                     CacheDependency dep = new CacheDependency(new string[0], new string[] { CACHEKEY_URLREDIRECTIONS });
-                    AgilityCache.Set(CACHEKEY_URLREDIRECTIONS_WILDCARD, wildcardRedirects, TimeSpan.FromDays(1), dep, AgilityContext.DefaultCachePriority);
+                    AgilityCache.Set(CACHEKEY_URLREDIRECTIONS_WILDCARD, wildcardRedirects, TimeSpan.FromMinutes(1), dep, AgilityContext.DefaultCachePriority);
                 }
 
                 return wildcardRedirects;
