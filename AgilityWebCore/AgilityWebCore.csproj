@@ -10,7 +10,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <RootNamespace>Agility.Web</RootNamespace>
-    <Version>1.1.0.0</Version>
+    <Version>1.2.0.0</Version>
     <Company>Agility</Company>
     <Product>Agility.AspNetCore</Product>
     <Authors>Agility</Authors>
