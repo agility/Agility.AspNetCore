@@ -15,6 +15,7 @@ using System.Data;
 using Agility.Web.Routing;
 using AgilityPage = Agility.Web.Objects.AgilityPage;
 using Agility.Web.Caching;
+using Microsoft.AspNetCore.Http.Extensions;
 
 namespace Agility.Web
 {
@@ -97,10 +98,19 @@ namespace Agility.Web
 
 				if (node != null) return node;
 
+                var rawUrl = AgilityContext.HttpContext?.Request.Path;
+                node = FindSiteMapNode(rawUrl);
 
-				AgilityPage page = AgilityContext.Page;
+                if (node != null && AgilityContext.HttpContext != null)
+                {
+                    AgilityContext.HttpContext.Items[cacheKey] = node;
+                    return node;
+				}
+
+                AgilityPage page = AgilityContext.Page;
 				AgilitySiteMapNode parentNode = null;
-				if (page != null)
+				
+                if (page != null)
 				{
 					node = FindSiteMapNodeFromKey(page.ID.ToString());
 					if (node != null)
@@ -330,22 +340,20 @@ namespace Agility.Web
 			}
 
 			XmlNodeList childNodes = channelElem.SelectNodes("SiteNode");
-			int i = 0;
 			foreach (XmlElement elem in childNodes)
 			{
-				AgilitySiteMapNode childNode = ConvertXmlElementToSiteMapNode(elem);
-				if (childNode != null)
-				{
-					//if the child node wasn't excluded via timed release
-					AddNode(childNode, _rootNode);
+				AgilitySiteMapNode childNode = ConvertXmlElementToSiteMapNode(elem, null);
+                if (childNode == null) continue;
 
+                //if the child node wasn't excluded via timed release
+                var agilitySiteMapNodes = AddNode(childNode, _rootNode);
 
-					//add it's children
-					AddChildNodes(childNode, elem);
-				}
-
-				i++;
-			}
+                foreach (var agilitySiteMapNode in agilitySiteMapNodes)
+                {
+                    //add it's children
+                    AddChildNodes(agilitySiteMapNode,elem);
+                }
+            }
 
 			return _rootNode;
 
@@ -364,11 +372,14 @@ namespace Agility.Web
 			XmlNodeList childNodes = elem.SelectNodes("SiteNode");
 			foreach (XmlElement childElem in childNodes)
 			{
-				AgilitySiteMapNode childNode = ConvertXmlElementToSiteMapNode(childElem);
-				AddNode(childNode, parentNode);
+				AgilitySiteMapNode childNode = ConvertXmlElementToSiteMapNode(childElem, parentNode);
+				var agilitySiteMapNodes = AddNode(childNode, parentNode);
 
-				AddChildNodes(childNode, childElem);
-			}
+                foreach (var agilitySiteMapNode in agilitySiteMapNodes)
+                {
+					AddChildNodes(agilitySiteMapNode, childElem);
+                }
+            }
 		}
 
 
@@ -472,42 +483,43 @@ namespace Agility.Web
 		}
 
 
-		protected void AddNode(AgilitySiteMapNode node, AgilitySiteMapNode parentNode)
+		protected List<AgilitySiteMapNode> AddNode(AgilitySiteMapNode node, AgilitySiteMapNode parentNode)
 		{
-			if (node == null) return;
-			if (_tmpAddedNodes.ContainsKey(node.Key)) return;
+			if (node == null) return new List<AgilitySiteMapNode>();
+			if (_tmpAddedNodes.ContainsKey(node.Key)) return new List<AgilitySiteMapNode>();
 
 			AgilitySiteMapNode pnode = parentNode as AgilitySiteMapNode;
-			if (pnode != null)
-			{
-				node.ParentNode = pnode;
 
-				string dynamicPageContentReferenceName = node.DynamicPageContentReferenceName;
-				string dynamicPageParentFieldName = node.DynamicPageParentFieldName;
+            if (pnode == null) return new List<AgilitySiteMapNode>();
 
-				if (!string.IsNullOrEmpty(dynamicPageContentReferenceName)
-					|| !string.IsNullOrEmpty(dynamicPageParentFieldName))
-				{
-					//if this node is a dynamic page, expand it
-					List<AgilitySiteMapNode> col = new List<AgilitySiteMapNode>();
-					col = GetDynamicChildNodes(node, parentNode, col);
+            node.ParentNode = pnode;
 
-					pnode.ChildNodes.AddRange(col);
+            string dynamicPageContentReferenceName = node.DynamicPageContentReferenceName;
+            string dynamicPageParentFieldName = node.DynamicPageParentFieldName;
 
-				}
-				else
-				{
-					//it's a regular one...
-					_tmpAddedNodes.Add(node.Key, node.Key);
+            if (!string.IsNullOrEmpty(dynamicPageContentReferenceName)
+                || !string.IsNullOrEmpty(dynamicPageParentFieldName))
+            {
+                //if this node is a dynamic page, expand it
+                List<AgilitySiteMapNode> col = new List<AgilitySiteMapNode>();
+                col = GetDynamicChildNodes(node, parentNode, col);
+                pnode.ChildNodes.AddRange(col);
+
+                return col;
+            }
+            else
+            {
+                //it's a regular one...
+                _tmpAddedNodes.Add(node.Key, node.Key);
+                pnode.ChildNodes.Add(node);
+                var list =  new List<AgilitySiteMapNode>();
+                list.Add(node);
+                return list;
+
+            }
 
 
-					pnode.ChildNodes.Add(node);
-
-				}
-			}
-
-
-		}
+        }
 
 
 		private List<AgilitySiteMapNode> GetDynamicChildNodes(AgilitySiteMapNode anode, AgilitySiteMapNode parentNode, List<AgilitySiteMapNode> collection)
@@ -736,7 +748,7 @@ namespace Agility.Web
 
 		}
 
-		private AgilitySiteMapNode ConvertXmlElementToSiteMapNode(XmlElement elem)
+		private AgilitySiteMapNode ConvertXmlElementToSiteMapNode(XmlElement elem, AgilitySiteMapNode parentNode)
 		{
 			//check the release/pull date first
 			if (AgilityContext.CurrentMode == Agility.Web.Enum.Mode.Live)
@@ -780,6 +792,11 @@ namespace Agility.Web
 			{
 				url = "javascript:;";
 			}
+            else if(parentNode is AgilityDynamicSiteMapNode)
+            {
+                var partialUrl = url.Substring(url.LastIndexOf('/'));
+                url = parentNode.Url + partialUrl;
+            }
 
 			//append the language code to the URL if we on a app relative url and the language module is in use.
 
