@@ -109,7 +109,7 @@ namespace Agility.Web
 
                 AgilityPage page = AgilityContext.Page;
 				AgilitySiteMapNode parentNode = null;
-				
+
                 if (page != null)
 				{
 					node = FindSiteMapNodeFromKey(page.ID.ToString());
@@ -423,13 +423,14 @@ namespace Agility.Web
 
 			if (rawUrl.EndsWith(".aspx", StringComparison.CurrentCultureIgnoreCase)) rawUrl = rawUrl.Substring(0, rawUrl.LastIndexOf(".aspx", StringComparison.CurrentCultureIgnoreCase));
 
-
-			Dictionary<string, AgilityRouteCacheItem> routes = AgilityRouteTable.GetRouteTable(AgilityContext.LanguageCode, AgilityContext.CurrentChannel.ID);
-			AgilityRouteCacheItem routeItem = null;
-
-			if (routes.TryGetValue(rawUrl, out routeItem))
+			foreach (var childNode in node.ChildNodes)
 			{
-				node = FindAgilityNodeByKey(parentNode, routeItem.PageID.ToString());
+				if (childNode.Url.ToLower() == rawUrl) {
+					return childNode;
+				}
+
+				var testNode = FindAgilityNodeByUrl(childNode, rawUrl);
+				if (testNode != null) return testNode;
 			}
 
 
