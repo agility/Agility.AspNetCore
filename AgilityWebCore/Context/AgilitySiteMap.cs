@@ -18,31 +18,28 @@ namespace Agility.Web
 	{
 
 		Dictionary<string, string> _tmpAddedNodes = new Dictionary<string, string>();
-
-
+		
 		private XmlDocument menuXml
 		{
 			get
 			{
 
-				string key = string.Format("Agility.Web.Providers.AgilitySiteMapProvider.menuXml.{0}.{1}", AgilityContext.LanguageCode, AgilityContext.WebsiteName);
-				XmlDocument document = AgilityContext.HttpContext.Items[key] as XmlDocument;
+				var key =
+                    $"Agility.Web.Providers.AgilitySiteMapProvider.menuXml.{AgilityContext.LanguageCode}.{AgilityContext.WebsiteName}";
 
-				if (document == null)
-				{
+                if (AgilityContext.HttpContext.Items[key] is XmlDocument document) return document;
 
-					//get the sitemap object for the current domain
-					AgilitySitemap sitemap = BaseCache.GetSitemap(AgilityContext.LanguageCode, AgilityContext.WebsiteName);
-					document = new XmlDocument();
-					if (sitemap != null)
-					{
-						document.LoadXml(sitemap.SitemapXml);
-						AgilityContext.HttpContext.Items[key] = document;
-					}
+                //get the sitemap object for the current domain
+                var sitemap = BaseCache.GetSitemap(AgilityContext.LanguageCode, AgilityContext.WebsiteName);
 
-				}
+                document = new XmlDocument();
 
-				return document;
+                if (sitemap == null) return document;
+
+                document.LoadXml(sitemap.SitemapXml);
+                AgilityContext.HttpContext.Items[key] = document;
+
+                return document;
 			}
 		}
 
@@ -51,16 +48,13 @@ namespace Agility.Web
 		{
 			get
 			{
-
-
-				AgilitySiteMapNode node = CachedRootNode;
+                var node = CachedRootNode;
 
 				if (node != null) return node;
 
 				lock (_lockObj)
 				{
-
-					//check to see if the cached node has been set while we were waiting...
+                    //check to see if the cached node has been set while we were waiting...
 					node = CachedRootNode;
 					if (node != null) return node;
 
@@ -69,22 +63,20 @@ namespace Agility.Web
 
 					//add the root node to cache
 					CachedRootNode = node;
-
-
-					return node;
+                    return node;
 				}
 
 			}
 		}
-
-
+		
 		public AgilitySiteMapNode CurrentNode
 		{
 			get
 			{
-				string cacheKey = "AgilitySitemapProvider.CurrentNode";
+				var cacheKey = "AgilitySitemapProvider.CurrentNode";
 				AgilitySiteMapNode node = null;
 
+				//check cache first
 				if (AgilityContext.HttpContext != null)
 				{
 					node = AgilityContext.HttpContext.Items[cacheKey] as AgilitySiteMapNode;
@@ -92,6 +84,7 @@ namespace Agility.Web
 
 				if (node != null) return node;
 
+				//if cache does not exist get node by URL
                 var rawUrl = AgilityContext.HttpContext?.Request.Path;
                 node = FindSiteMapNode(rawUrl);
 
@@ -101,72 +94,66 @@ namespace Agility.Web
                     return node;
 				}
 
-                AgilityPage page = AgilityContext.Page;
+                //if node does not exist by URL then get by page ID
+                var page = AgilityContext.Page;
 				AgilitySiteMapNode parentNode = null;
 
-                if (page != null)
-				{
-					node = FindSiteMapNodeFromKey(page.ID.ToString());
-					if (node != null)
-					{
-						parentNode = node.ParentNode;
+                if (page == null) return null;
 
-						//traverse up the tree until the first static page is found
-						//for most dynamic pages -- parentNode will be the exit point
-						while (parentNode != null)
-						{
-							var aNode = parentNode;
-							if (aNode != null
-								&& aNode.AgilityPage != null
-								&& (
-									!string.IsNullOrEmpty(aNode.AgilityPage.ServerPage.DynamicPageContentViewReferenceName)
-									|| !string.IsNullOrEmpty(aNode.AgilityPage.ServerPage.DynamicPageParentFieldName)
-								)
-							)
-							{
-								parentNode = aNode.ParentNode;
-							}
-							else
-							{
-								break;
-							}
+                node = FindSiteMapNodeFromKey(page.ID.ToString());
+                if (node != null)
+                {
+                    parentNode = node.ParentNode;
 
-						}
+                    //traverse up the tree until the first static page is found
+                    //for most dynamic pages -- parentNode will be the exit point
+                    while (parentNode != null)
+                    {
+                        var aNode = parentNode;
+                        if (aNode?.AgilityPage != null && (
+                                !string.IsNullOrEmpty(aNode.AgilityPage.ServerPage.DynamicPageContentViewReferenceName)
+                                || !string.IsNullOrEmpty(aNode.AgilityPage.ServerPage.DynamicPageParentFieldName)
+                            )
+                        )
+                        {
+                            parentNode = aNode.ParentNode;
+                        }
+                        else
+                        {
+                            break;
+                        }
 
-					}
+                    }
 
+                }
+				
+                parentNode ??= RootNode;
 
-					if (parentNode == null) parentNode = RootNode;
+                //check if this is a dynamic page... if so, we need to load up the child items for the parent...
+                var anode = node;
+                if (AgilityContext.DynamicPageItemRow != null)
+                {
+                    if (!int.TryParse($"{AgilityContext.DynamicPageItemRow["ContentID"]}", out var contentID)) contentID = -1;
 
-					//check if this is a dynamic page... if so, we need to load up the child items for the parent...
-					if (AgilityContext.DynamicPageItemRow != null)
-					{
+                    //do a search for this node, starting at the root...
+                    node = FindDynamicNodeByContentID(parentNode, contentID);
 
-						int contentID = -1;
-						if (!int.TryParse($"{AgilityContext.DynamicPageItemRow["ContentID"]}", out contentID)) contentID = -1;
+                    //now, we may need to keep searching if the CURRENT node is actually a static page UNDERNEATH the dynamic node..
+                    if (anode != null && anode.PageItemID != page.ID)
+                    {
+                        //now we have to search
+                        node = FindAgilityNodeByPageID(anode, page.ID);
+                    }
 
-						//do a search for this node, starting at the root...
-						node = FindDynamicNodeByContentID(parentNode, contentID);
+                }
 
-						//now, we may need to keep searching if the CURRENT node is actually a static page UNDERNEATH the dynamic node..
-						AgilitySiteMapNode anode = node;
-						if (anode != null && anode.PageItemID != page.ID)
-						{
-							//now we have to search
-							node = FindAgilityNodeByPageID(anode, page.ID);
-						}
+                if (node != null && AgilityContext.HttpContext != null)
+                {
+                    AgilityContext.HttpContext.Items[cacheKey] = node;
+                }
 
-					}
-
-					if (node != null && AgilityContext.HttpContext != null)
-					{
-						AgilityContext.HttpContext.Items[cacheKey] = node;
-					}
-
-					return node;
-				}
-				return null;
-			}
+                return node;
+            }
 		}
 
 
@@ -174,7 +161,8 @@ namespace Agility.Web
 		{
 			get
 			{
-				string key = string.Format("Agility.Web.Providers.AgilitySiteMapProvider.cachedRootNode_{0}_{1}_{2}_{3}", AgilityContext.CurrentMode, AgilityContext.LanguageCode, AgilityContext.WebsiteName, AgilityContext.CurrentChannel.ID);
+				var key =
+                    $"Agility.Web.Providers.AgilitySiteMapProvider.cachedRootNode_{AgilityContext.CurrentMode}_{AgilityContext.LanguageCode}_{AgilityContext.WebsiteName}_{AgilityContext.CurrentChannel.ID}";
 				return key;
 			}
 		}
@@ -190,19 +178,14 @@ namespace Agility.Web
 		public AgilitySiteMapNode FindDynamicNodeByContentID(AgilitySiteMapNode parentNode, int contentID)
 		{
 
-			foreach (AgilitySiteMapNode childNode in parentNode.ChildNodes)
+			foreach (var childNode in parentNode.ChildNodes)
 			{
-				var dynNode = childNode as AgilityDynamicSiteMapNode;
-				if (dynNode != null && dynNode.ContentID == contentID) return dynNode;
-
-
-
-				AgilitySiteMapNode testNode = FindDynamicNodeByContentID(childNode, contentID);
+                if (childNode is AgilityDynamicSiteMapNode dynNode && dynNode.ContentID == contentID) return dynNode;
+				
+				var testNode = FindDynamicNodeByContentID(childNode, contentID);
 				if (testNode != null) return testNode;
-
-			}
-
-			return null;
+            }
+            return null;
 		}
 
 
@@ -210,31 +193,20 @@ namespace Agility.Web
 		{
 			get
 			{
-				string key = Cachekey;
+				var key = Cachekey;
 				if (AgilityContext.CurrentMode == Mode.Staging || AgilityContext.IsPreview)
 				{
 					//attempt to get from context
-					AgilitySiteMapNode o = AgilityContext.HttpContext.Items[key] as AgilitySiteMapNode;
-					if (o != null) return o;
+                    if (AgilityContext.HttpContext.Items[key] is AgilitySiteMapNode o) return o;
 				}
-
-
+				
 				//attempt to get the from cache
-				AgilitySiteMapNode obj = AgilityCache.Get(key) as AgilitySiteMapNode;
-				if (obj != null) return obj;
-
-
-				return null;
-			}
+				var obj = AgilityCache.Get(key) as AgilitySiteMapNode;
+                return obj;
+            }
 			set
 			{
-				string key = Cachekey; // string.Format("Agility.Web.Providers.AgilitySiteMapProvider.cachedRootNode_{0}_{1}_{2}", AgilityContext.CurrentMode, AgilityContext.LanguageCode, AgilityContext.WebsiteName);
-
-				//if (AgilityContext.CurrentMode == Agility.Web.Enum.Mode.Staging || AgilityContext.IsPreview)
-				//{
-				//	HttpContext.Current.Items[key] = value;
-				//}
-
+				var key = Cachekey;
 
 				if (value == null)
 				{
@@ -244,18 +216,19 @@ namespace Agility.Web
 				{
 
 					//use a dependance on the Sitemap cache object
-					AgilityItemKey itemKey = new AgilityItemKey();
-					itemKey.Key = BaseCache.ITEMKEY_SITEMAP;
-					itemKey.LanguageCode = AgilityContext.LanguageCode;
-					itemKey.ItemType = typeof(AgilitySitemap).Name;
+                    AgilityItemKey itemKey = new AgilityItemKey
+                    {
+                        Key = BaseCache.ITEMKEY_SITEMAP,
+                        LanguageCode = AgilityContext.LanguageCode,
+                        ItemType = nameof(AgilitySitemap)
+                    };
 
-					string cacheKey = BaseCache.GetCacheKey(itemKey);
-
-
-					CacheDependency cd = new CacheDependency(null, new[] { cacheKey });
-					if (AgilityContext.CurrentMode == Mode.Staging || AgilityContext.IsPreview)
+                    var cacheKey = BaseCache.GetCacheKey(itemKey);
+					var cd = new CacheDependency(null, new[] { cacheKey });
+					
+                    if (AgilityContext.CurrentMode == Mode.Staging || AgilityContext.IsPreview)
 					{
-						string filename = BaseCache.GetFilePathForItemKey(itemKey, AgilityContext.WebsiteName, transientPath: true);
+						var filename = BaseCache.GetFilePathForItemKey(itemKey, AgilityContext.WebsiteName, transientPath: true);
 						if (File.Exists(filename))
 						{
 							cd = new CacheDependency(new[] { filename });
@@ -267,33 +240,30 @@ namespace Agility.Web
 						AgilityContext.HttpContext.Items[key] = value;
 						AgilityCache.Set(key, value, TimeSpan.FromDays(1), cd, AgilityContext.DefaultCachePriority);
 					}
-					catch
-					{
-
-
-					}
-				}
-				//}
+                    catch
+                    {
+                        // ignored
+                    }
+                }
 			}
 		}
 
 
-        private static object _lockObj = new object();
+        private static readonly object _lockObj = new object();
 
-
-		protected virtual AgilitySiteMapNode GenerateAgilitySitemap()
+        protected virtual AgilitySiteMapNode GenerateAgilitySitemap()
 		{
 			// Since the SiteMap class is static, make sure that it is
 			// not modified while the site map is built.
 
             AgilitySiteMapNode rootNode = null;
-			WebTrace.WriteInfoLine(string.Format("Building Sitemap: {0}, {1}, {2}, {3}", AgilityContext.CurrentMode, AgilityContext.LanguageCode, AgilityContext.WebsiteName, AgilityContext.CurrentChannel.ReferenceName));
+			WebTrace.WriteInfoLine(
+                $"Building Sitemap: {AgilityContext.CurrentMode}, {AgilityContext.LanguageCode}, {AgilityContext.WebsiteName}, {AgilityContext.CurrentChannel.ReferenceName}");
 
 			// Start with a clean slate
 			_tmpAddedNodes.Clear();
 
-
-			if (menuXml != null)
+            if (menuXml != null)
 			{
 				//THE ROOT NODE
                 rootNode = new AgilitySiteMapNode(string.Empty, string.Empty, string.Empty) {ParentNode = null};
@@ -334,10 +304,7 @@ namespace Agility.Web
             return rootNode;
 
 		}
-
-
-
-
+		
 		/// <summary>
 		/// Recursively add nodes to the SiteMap from the XML File
 		/// </summary>
@@ -435,23 +402,8 @@ namespace Agility.Web
 
 		}
 
-		protected virtual void InsertNode(AgilitySiteMapNode node, AgilitySiteMapNode parentNode, int index)
-		{
-			if (_tmpAddedNodes.ContainsKey(node.Key)) return;
 
-			_tmpAddedNodes.Add(node.Key, node.Key);
-
-			AgilitySiteMapNode anode = node;
-			AgilitySiteMapNode pnode = parentNode;
-			if (anode != null && pnode != null)
-			{
-				anode.ParentNode = pnode;
-				pnode.ChildNodes.Insert(index, anode);
-			}
-		}
-
-
-		protected List<AgilitySiteMapNode> AddNode(AgilitySiteMapNode node, AgilitySiteMapNode parentNode)
+        protected List<AgilitySiteMapNode> AddNode(AgilitySiteMapNode node, AgilitySiteMapNode parentNode)
 		{
 			if (node == null) return new List<AgilitySiteMapNode>();
 		
@@ -657,53 +609,44 @@ namespace Agility.Web
 			AgilitySiteMapNode anode = node;
 
 
+            if (anode == null) return new List<AgilitySiteMapNode>();
 
-			if (anode != null)
-			{
-				List<AgilitySiteMapNode> col = new List<AgilitySiteMapNode>();
+            var col = new List<AgilitySiteMapNode>();
 
-				for (int i = 0; i < anode.ChildNodes.Count; i++)
-				{
+            foreach (var agilitySiteMapNode in anode.ChildNodes)
+            {
+                //check for dynamic pages...
+                var childNode = agilitySiteMapNode;
 
-					//check for dynamic pages...
-					AgilitySiteMapNode childNode = anode.ChildNodes[i];
+                if (childNode == null)
+                {
+                    col.Add(agilitySiteMapNode);
+                    continue;
+                }
 
-					if (childNode == null)
-					{
-						col.Add(anode.ChildNodes[i]);
-						continue;
-					}
+                var dynamicPageContentReferenceName = childNode.DynamicPageContentReferenceName;
+                var dynamicPageParentFieldName = childNode.DynamicPageParentFieldName;
 
-					string dynamicPageContentReferenceName = childNode.DynamicPageContentReferenceName;
-					string dynamicPageParentFieldName = childNode.DynamicPageParentFieldName;
-
-					if (!string.IsNullOrEmpty(dynamicPageContentReferenceName)
-						|| !string.IsNullOrEmpty(dynamicPageParentFieldName))
-					{
-						col = GetDynamicChildNodes(childNode, anode, col);
-					}
-					else
-					{
-						col.Add(childNode);
-					}
-
-				}
+                if (!string.IsNullOrEmpty(dynamicPageContentReferenceName)
+                    || !string.IsNullOrEmpty(dynamicPageParentFieldName))
+                {
+                    col = GetDynamicChildNodes(childNode, anode, col);
+                }
+                else
+                {
+                    col.Add(childNode);
+                }
+            }
 
 
-				return col;
-			}
+            return col;
 
-			return new List<AgilitySiteMapNode>();
-
-		}
+        }
 		
 		public AgilitySiteMapNode GetParentNode(AgilitySiteMapNode node)
 		{
-			if (node == null) return null;
-			AgilitySiteMapNode anode = node;
-			if (anode == null) return node.ParentNode;
-
-			return anode.ParentNode;
+            var anode = node;
+            return anode?.ParentNode;
 
 		}
 
@@ -712,20 +655,17 @@ namespace Agility.Web
 			//check the release/pull date first
 			if (AgilityContext.CurrentMode == Mode.Live)
 			{
-				DateTime dtViewingDate = DateTime.Now;
+				var dtViewingDate = DateTime.Now;
 				if (AgilityContext.IsPreview && AgilityContext.PreviewDateTime != DateTime.MinValue)
 				{
 					dtViewingDate = AgilityContext.PreviewDateTime;
 				}
 
 				//filter on release/pull date
-				string releaseDateStr = elem.GetAttribute("releaseDate");
-				string pullDateStr = elem.GetAttribute("pullDate");
+				var releaseDateStr = elem.GetAttribute("releaseDate");
+				var pullDateStr = elem.GetAttribute("pullDate");
 
-				DateTime releaseDate = DateTime.MinValue;
-				DateTime pullDate = DateTime.MinValue;
-
-				if (DateTime.TryParse(releaseDateStr, out releaseDate) && releaseDate != DateTime.MinValue)
+                if (DateTime.TryParse(releaseDateStr, out var releaseDate) && releaseDate != DateTime.MinValue)
 				{
 					if (releaseDate != DateTime.MinValue && releaseDate > dtViewingDate)
 					{
@@ -734,7 +674,7 @@ namespace Agility.Web
 					}
 				}
 
-				if (DateTime.TryParse(pullDateStr, out pullDate) && pullDate != DateTime.MinValue)
+				if (DateTime.TryParse(pullDateStr, out var pullDate) && pullDate != DateTime.MinValue)
 				{
 					if (pullDate <= dtViewingDate)
 					{
@@ -746,7 +686,7 @@ namespace Agility.Web
 
 
 			//do the conversion
-			string url = elem.GetAttribute("NavigateURL");
+			var url = elem.GetAttribute("NavigateURL");
 			if (url == string.Empty)
 			{
 				url = "javascript:;";
@@ -757,22 +697,15 @@ namespace Agility.Web
                 url = parentNode.Url + partialUrl;
             }
 
-			string id = elem.GetAttribute("picID").ToLower();
-			int picID = 0;
-			int.TryParse(id, out picID);
+			var id = elem.GetAttribute("picID").ToLower();
+            int.TryParse(id, out var picID);
 
-			AgilitySiteMapNode node = new AgilitySiteMapNode(id, url, elem.GetAttribute("Text"));
-			node.PageItemID = picID;
+            var node = new AgilitySiteMapNode(id, url, elem.GetAttribute("Text")) {PageItemID = picID};
 
-			bool addedTarget = false;
-
-			foreach (XmlAttribute att in elem.Attributes)
+            foreach (XmlAttribute att in elem.Attributes)
 			{
-
-				var attributeName = att.Name.ToLowerInvariant();
-
-
-				switch (attributeName)
+                var attributeName = att.Name.ToLowerInvariant();
+                switch (attributeName)
 				{
 					case "pagepath":
 						node.PagePath = att.Value;
@@ -783,13 +716,11 @@ namespace Agility.Web
 						break;
 
 					case "menuvisible":
-						bool bv = true;
-						if (bool.TryParse(att.Value, out bv)) node.MenuVisible = bv;
+                        if (bool.TryParse(att.Value, out var bv)) node.MenuVisible = bv;
 						break;
 
 					case "sitemapvisible":
-						bool sv = true;
-						if (bool.TryParse(att.Value, out sv)) node.SitemapVisible = sv;
+                        if (bool.TryParse(att.Value, out var sv)) node.SitemapVisible = sv;
 						break;
 
 					case "dynamicpagecontentreferencename":
@@ -799,19 +730,15 @@ namespace Agility.Web
 					case "dynamicpageparentfieldname":
 						node.DynamicPageParentFieldName = att.Value;
 						break;
+                }
+            }
 
-				}
-
-			}
-
-
-			if (string.IsNullOrEmpty(node.PagePath))
+            if (string.IsNullOrEmpty(node.PagePath))
 			{
 				node.PagePath = elem.GetAttribute("FolderPath");
 			}
 
-
-			return node;
+            return node;
 		}
 		
 	}
