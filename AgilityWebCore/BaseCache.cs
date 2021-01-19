@@ -2043,15 +2043,7 @@ namespace Agility.Web
             if (AgilityContext.HttpContext != null && AgilityContext.HttpContext.Request != null)
             {
 				auth.IPAddress = AgilityContext.HttpContext.Connection.RemoteIpAddress.ToString();
-                try
-                {
-                    auth.Referrer = $"{AgilityContext.HttpContext.Request.Headers["Referer"]}";
-                }
-                catch
-                {
-                    // ignored
-                }
-
+                auth.Referrer = $"{AgilityContext.HttpContext.Request.Headers["Referer"]}";
                 auth.Url = $"{AgilityContext.HttpContext.Request.GetDisplayUrl()}";
 
                 if (AgilityContext.HttpContext.User != null && AgilityContext.HttpContext.User.Identity != null)
@@ -2063,7 +2055,6 @@ namespace Agility.Web
             {
                 auth.Url = AgilityHttpModule.BaseURL;
             }
-
 
             return auth;
         }
