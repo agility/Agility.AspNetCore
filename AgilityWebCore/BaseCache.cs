@@ -2035,19 +2035,16 @@ namespace Agility.Web
 
         public static AgilityWebsiteAuthorization GetAgilityWebsiteAuthorization()
         {
-            AgilityWebsiteAuthorization auth = new AgilityWebsiteAuthorization();
-            auth.SecurityKey = Current.Settings.SecurityKey;
-            auth.WebsiteName = AgilityContext.WebsiteName;
+            var auth = new AgilityWebsiteAuthorization
+            {
+                SecurityKey = Current.Settings.SecurityKey, WebsiteName = AgilityContext.WebsiteName
+            };
 
             if (AgilityContext.HttpContext != null && AgilityContext.HttpContext.Request != null)
             {
 				auth.IPAddress = AgilityContext.HttpContext.Connection.RemoteIpAddress.ToString();
-                try
-                {
-                    auth.Referrer = string.Format("{0}", AgilityContext.HttpContext.Request.Headers["Referer"]);
-                }
-                catch { }
-                auth.Url = string.Format("{0}", AgilityContext.HttpContext.Request.GetDisplayUrl());
+                auth.Referrer = $"{AgilityContext.HttpContext.Request.Headers["Referer"]}";
+                auth.Url = $"{AgilityContext.HttpContext.Request.GetDisplayUrl()}";
 
                 if (AgilityContext.HttpContext.User != null && AgilityContext.HttpContext.User.Identity != null)
                 {
@@ -2058,7 +2055,6 @@ namespace Agility.Web
             {
                 auth.Url = AgilityHttpModule.BaseURL;
             }
-
 
             return auth;
         }
