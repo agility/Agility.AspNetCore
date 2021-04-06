@@ -699,7 +699,7 @@ namespace Agility.Web
             {
 
                 //check context first
-                AgilityPage _page = AgilityContext.HttpContext.Items["Agility.Web.AgilityContext.Page"] as AgilityPage;
+                AgilityPage _page = null;//AgilityContext.HttpContext.Items["Agility.Web.AgilityContext.Page"] as AgilityPage;
                 if (_page == null)
                 {
                     //TODO: verify this path is correct to get the page from...

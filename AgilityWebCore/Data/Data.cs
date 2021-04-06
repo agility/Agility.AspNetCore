@@ -300,6 +300,7 @@ namespace Agility.Web
 			
 			if (string.IsNullOrEmpty(languageCode)) languageCode = AgilityContext.LanguageCode;
 			string websiteName = AgilityContext.WebsiteName;
+			
 
 			Agility.Web.AgilityContentServer.AgilityPage serverPage = BaseCache.GetPage(url, languageCode, websiteName);
 
@@ -1004,9 +1005,8 @@ namespace Agility.Web
 		static public Objects.AgilityPage CreateAPIPageObject(AgilityContentServer.AgilityPage serverPage)
 		{
 			if (serverPage == null) return null;
-			
-	
-			Objects.AgilityPage page = new Objects.AgilityPage();
+
+            Objects.AgilityPage page = new Objects.AgilityPage();
 			page.ServerPage = serverPage;
 			page.ID = serverPage.ID;
 			page.LanguageCode = serverPage.LanguageCode;

@@ -15,7 +15,7 @@ namespace Agility.Web.Objects
 
 		public string Title { get; set; }
 
-		public bool SitemapVisible { get; set; } = true;
+		public bool  SitemapVisible { get; set; } = true;
 		public bool MenuVisible { get; set; } = true;
 
 		public string DynamicPageContentReferenceName {get; set;}
