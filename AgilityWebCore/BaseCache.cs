@@ -564,9 +564,7 @@ namespace Agility.Web
                     {
                         rows = dt.Select(filter, "ItemOrder, versionID DESC");
                     }
-
-
-
+                    
                     //perform the filter		
                     Dictionary<int, int> importedItems = new Dictionary<int, int>(rows.Length);
                     foreach (DataRow row in rows)
