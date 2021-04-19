@@ -699,26 +699,23 @@ namespace Agility.Web
             {
 
                 //check context first
-                AgilityPage _page = null;//AgilityContext.HttpContext.Items["Agility.Web.AgilityContext.Page"] as AgilityPage;
-                if (_page == null)
-                {
-                    //TODO: verify this path is correct to get the page from...
-                    string url = AgilityContext.HttpContext.Request.Path;
+                var page = HttpContext.Items["Agility.Web.AgilityContext.Page"] as AgilityPage;
 
-                    url = HttpUtility.UrlPathEncode(url);
+                if (page != null) return page;
 
-                    _page = Agility.Web.Data.GetPage(url);
+                //TODO: verify this path is correct to get the page from...
+                string url = HttpContext.Request.Path;
 
-                    AgilityContext.HttpContext.Items["Agility.Web.AgilityContext.Page"] = _page;
-                }
+                url = HttpUtility.UrlPathEncode(url);
+
+                page = Data.GetPage(url);
+
+                HttpContext.Items["Agility.Web.AgilityContext.Page"] = page;
 
 
-                return _page;
+                return page;
             }
-            set
-            {
-                AgilityContext.HttpContext.Items["Agility.Web.AgilityContext.Page"] = value;
-            }
+            set => HttpContext.Items["Agility.Web.AgilityContext.Page"] = value;
         }
 
 
