@@ -1501,7 +1501,7 @@ namespace Agility.Web.HttpModules
 			//if the lang is in the query string, set the context based on this...
 			string qlang = context.Request.Query["lang"];
 			bool wasLanguageSetFromQueryString = false;
-			string originalRedirect = null;
+			 string originalRedirect = null;
 			if (!string.IsNullOrEmpty(qlang))
 			{
 
@@ -1573,7 +1573,8 @@ namespace Agility.Web.HttpModules
 					if (!string.IsNullOrEmpty(redirectUrl))
 					{
 						redirectUrl = pagePath;
-					}
+                        wasLangInUrl = false;
+                    }
 				}
 			}
 
@@ -1628,10 +1629,17 @@ namespace Agility.Web.HttpModules
 						
 					}
 
-					if (!string.IsNullOrEmpty(context.Request.Path.Value))
+					if (!string.IsNullOrEmpty(pagePath))
 					{
-						redirectUrl = string.Format("{0}/{1}", redirectUrl, context.Request.Path.Value);
-					}
+                        if (redirectUrl != "/" && pagePath != "/")
+                        {
+                            redirectUrl = string.Format("{0}/{1}", redirectUrl, context.Request.Path.Value);
+                        }
+                        else if(redirectUrl == "/" && pagePath != "/")
+                        {
+                            redirectUrl = context.Request.Path.Value;
+                        }
+                    }
 				}
 
 				
