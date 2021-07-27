@@ -4,11 +4,11 @@ using Microsoft.AspNetCore.Http;
 
 namespace Agility.Web.Middleware
 {
-    public class AgilityRedirectMiddleware
+    public class AgilityLanguageRedirectMiddleware
     {
         private readonly RequestDelegate _next;
 
-        public AgilityRedirectMiddleware(RequestDelegate next)
+        public AgilityLanguageRedirectMiddleware(RequestDelegate next)
         {
             _next = next;
         }
