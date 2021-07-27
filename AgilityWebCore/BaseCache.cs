@@ -30,6 +30,7 @@ using Agility.Web.Mvc;
 using Microsoft.AspNetCore.Http.Extensions;
 using Newtonsoft.Json;
 using Agility.Web.Providers;
+using Microsoft.AspNetCore.Http;
 
 namespace Agility.Web
 {
@@ -780,27 +781,8 @@ namespace Agility.Web
 
             AgilityPage page = null;
 
-
             //try to resolve the page in this language
             List<ResolvedPage> lstResolvedPages = AgilityRouteTable.ResolveRoutePath(url, languageCode);
-            
-            var setLanguageCode = AgilityContext.LanguageCode;
-
-            if (lstResolvedPages == null || lstResolvedPages.Count == 0 && setLanguageCode != languageCode)
-            {
-                //get page ID
-                //check different local
-                var existsInDifferentLocale = AgilityRouteTable.ResolveRoutePath(url, setLanguageCode);
-
-                if (existsInDifferentLocale != null)
-                {
-                    var pageId = existsInDifferentLocale.First().Page.ID;
-                    var pageUrl = GetPagePath(pageId, languageCode, AgilityContext.WebsiteName);
-                    lstResolvedPages = AgilityRouteTable.ResolveRoutePath(pageUrl.TrimStart('~'), languageCode);
-                }
-
-            }
-
 
             if ((lstResolvedPages == null || lstResolvedPages.Count == 0) && !AgilityContext.IsResponseEnded)
             {
