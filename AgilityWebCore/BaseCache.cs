@@ -30,6 +30,7 @@ using Agility.Web.Mvc;
 using Microsoft.AspNetCore.Http.Extensions;
 using Newtonsoft.Json;
 using Agility.Web.Providers;
+using Microsoft.AspNetCore.Http;
 
 namespace Agility.Web
 {
@@ -782,7 +783,6 @@ namespace Agility.Web
 
             //try to resolve the page in this language
             List<ResolvedPage> lstResolvedPages = AgilityRouteTable.ResolveRoutePath(url, languageCode);
-
 
             if ((lstResolvedPages == null || lstResolvedPages.Count == 0) && !AgilityContext.IsResponseEnded)
             {
