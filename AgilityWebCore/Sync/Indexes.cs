@@ -400,10 +400,16 @@ namespace Agility.Web.Sync
 					}
 
 					DataTable dt = existingItem_Content.DataSet.Tables["ContentItems"];
-					if (dt != null)
+					if (dt != null && dt.Columns["VersionID"] != null)
 					{
-						object maxObj = dt.Compute("max(VersionID)", "");
-						if (!int.TryParse($"{maxObj}", out versionID)) versionID = -1;
+						try
+						{
+							object maxObj = dt.Compute("max(VersionID)", "");
+							if (!int.TryParse($"{maxObj}", out versionID)) versionID = -1;
+						} catch (Exception ex)
+						{
+							throw ex;
+						}
 						
 					}
 
