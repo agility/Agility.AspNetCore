@@ -2239,38 +2239,52 @@ namespace Agility.Web
 				var dtAttachments = dsDelta.Tables["Attachments"];
 				var dtExistingAttachments = dsExisting.Tables["Attachments"];
 
-                if (debugSync) WebTrace.WriteWarningLine(string.Format("MergeContent: Handling attachments 1: refname:{0}", deltaContent.ReferenceName));
+                //handle the case where the attachments table has NO columns...
+                if (dtExistingAttachments.Columns.Count == 0
+                    && dtAttachments.Columns.Count > 0)
+                {                    
+                    dsExisting.Tables.Remove("Attachments");
+                    dsDelta.Tables.Remove("Attachments");
 
-                //remove duplicate attachment rows
-                foreach (DataRow attRow in dtAttachments.Rows)
-                {
-					var guid = $"{attRow["GUID"]}";
-
-					int versionID = -1;
-					if (!int.TryParse($"{attRow["VersionID"]}", out versionID)) versionID = -1;
-					
-
-					DataRow[] attDelRows = dtExistingAttachments.Select(string.Format("GUID = '{0}' AND versionID = {1}", guid, versionID), string.Empty, DataViewRowState.CurrentRows);
-                    foreach (DataRow attDelRow in attDelRows)
-                    {
-                        //remove any duplicate attachment row(s)
-                        attDelRow.Delete();
-                    }
-
-					//add the new attachment row(s)
-					dtExistingAttachments.ImportRow(attRow);
+                    dsExisting.Tables.Add(dtAttachments);
 
                 }
-
-                if (debugSync) WebTrace.WriteWarningLine(string.Format("MergeContent: Handling attachments 2: refname:{0}", deltaContent.ReferenceName));
-
-                //dump any attachments for items that were just synced...
-                foreach (int versionID in importedVersionIDs)
+                else
                 {
-                    DataRow[] attDelRows = dtAttachments.Select(string.Format("VersionID = {0}", versionID), string.Empty, DataViewRowState.CurrentRows);
-                    foreach (DataRow attDelRow in attDelRows)
+                    //do the sync...
+                    if (debugSync) WebTrace.WriteWarningLine(string.Format("MergeContent: Handling attachments 1: refname:{0}", deltaContent.ReferenceName));
+
+                    //remove duplicate attachment rows
+                    foreach (DataRow attRow in dtAttachments.Rows)
                     {
-                        attDelRow.Delete();
+                        var guid = $"{attRow["GUID"]}";
+
+                        int versionID = -1;
+                        if (!int.TryParse($"{attRow["VersionID"]}", out versionID)) versionID = -1;
+
+
+                        DataRow[] attDelRows = dtExistingAttachments.Select(string.Format("GUID = '{0}' AND versionID = {1}", guid, versionID), string.Empty, DataViewRowState.CurrentRows);
+                        foreach (DataRow attDelRow in attDelRows)
+                        {
+                            //remove any duplicate attachment row(s)
+                            attDelRow.Delete();
+                        }
+
+                        //add the new attachment row(s)
+                        dtExistingAttachments.ImportRow(attRow);
+
+                    }
+
+                    if (debugSync) WebTrace.WriteWarningLine(string.Format("MergeContent: Handling attachments 2: refname:{0}", deltaContent.ReferenceName));
+
+                    //dump any attachments for items that were just synced...
+                    foreach (int versionID in importedVersionIDs)
+                    {
+                        DataRow[] attDelRows = dtAttachments.Select(string.Format("VersionID = {0}", versionID), string.Empty, DataViewRowState.CurrentRows);
+                        foreach (DataRow attDelRow in attDelRows)
+                        {
+                            attDelRow.Delete();
+                        }
                     }
                 }
 
