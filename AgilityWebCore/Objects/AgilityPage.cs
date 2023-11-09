@@ -41,13 +41,13 @@ namespace Agility.Web.Objects
             {
                 if (_URL == "")
                 {
-					
-					//TODO: figure out sitemap provider..
-     //               SiteMapNode node = SiteMap.Provider.FindSiteMapNodeFromKey(ID.ToString());
-					//if (node != null)
-					//{
-					//	_URL = node.Url;
-					//}
+                    var sitemap = new AgilitySiteMap();
+                    var node = sitemap.FindSiteMapNodeFromKey(ID.ToString());
+
+                    if (node != null)
+                    {
+                        _URL = node.Url;
+                    }
                 }
                 return _URL;
             }
